@@ -20,7 +20,7 @@ http.createServer((req, res) => {                                   // static se
   } else { res.writeHead(200, { "Content-Type": type, "Content-Length": size, "Accept-Ranges": "bytes" }); fs.createReadStream(f).pipe(res); }
 }).listen(8000);
 
-const URL = "http://localhost:8000/", OUT = "media", FR = "media/frames", FPS = 15;
+const URL = "http://localhost:8000/", OUT = "media", FR = "media/frames", FPS = 12;
 fs.mkdirSync(FR, { recursive: true });
 const ARGS = ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--disable-dev-shm-usage"];
 const ready = p => p.waitForFunction(() => window.S && S.ready && S.map.getLayer("bld"), null, { timeout: 180000 });
@@ -35,7 +35,7 @@ let br = await chromium.launch({ args: ARGS });
   await p.goto(URL, { waitUntil: "networkidle" }); await ready(p);
   await p.evaluate(() => { S.manual = true; S.t = 1090; S.phase = 0.3; S.map.jumpTo({ center: [-73.984, 40.748], zoom: 12.3, pitch: 62, bearing: -30 }); S.render(); });
   await settle(p); await p.evaluate(() => S.render()); await p.waitForTimeout(1500);
-  await p.screenshot({ path: `${OUT}/thumb_full.jpg`, type: "jpeg", quality: 90 });
+  await p.screenshot({ path: `${OUT}/thumb_full.jpg`, type: "jpeg", quality: 90, timeout: 240000 });
   console.log("thumbnail", new Date().toISOString());
   await p.close();
 }
@@ -88,13 +88,13 @@ async function openPage() {
 }
 let page = await openPage();
 
-const SWEEP = 186, CARD = 42, plan = [];
+const SWEEP = 150, CARD = 30, plan = [];
 for (let i = 0; i < SWEEP; i++) { const k = i / (SWEEP - 1); plan.push({ t: 1439.5 * k, phase: i / FPS }); }
-for (let i = 0; i < CARD; i++) plan.push({ t: 1439.5, phase: (SWEEP + i) / FPS, card: Math.min(1, i / 8) });
+for (let i = 0; i < CARD; i++) plan.push({ t: 1439.5, phase: (SWEEP + i) / FPS, card: Math.min(1, i / 6) });
 
 let n = 0;
 for (const fr of plan) {
-  if (n > 0 && n % 45 === 0) { await br.close(); br = await chromium.launch({ args: ARGS }); page = await openPage(); }
+  if (n > 0 && n % 30 === 0) { await br.close(); br = await chromium.launch({ args: ARGS }); page = await openPage(); }
   await page.evaluate(fr => {
     S.t = fr.t; S.phase = fr.phase;
     const c = cam(fr.t); c.zoom = Math.max(11.02, c.zoom - 0.12);
@@ -109,8 +109,8 @@ for (const fr of plan) {
     if (fr.card != null) { document.getElementById("c2").style.opacity = fr.card; document.querySelector(".v.bot").style.opacity = 1 - fr.card; document.querySelector(".v.clock").style.opacity = 1 - fr.card; }
   }, fr);
   await page.evaluate(() => new Promise(r => { S.map.once("idle", () => setTimeout(r, 20)); S.map.triggerRepaint(); setTimeout(r, 2500); }));
-  await page.screenshot({ path: `${FR}/f${String(n).padStart(4, "0")}.png` }); n++;
-  if (n % 30 === 0) console.log("frame", n, new Date().toISOString());
+  await page.screenshot({ path: `${FR}/f${String(n).padStart(4, "0")}.png`, timeout: 240000 }); n++;
+  if (n % 10 === 0) console.log("frame", n, new Date().toISOString());
 }
 fs.copyFileSync(`${FR}/f${String(Math.round(SWEEP * 0.76)).padStart(4, "0")}.png`, `${OUT}/cover.png`);
 await br.close();
