@@ -160,6 +160,11 @@ facts = [
   [20 * 60 + 30, f"Brooklyn's heart moves: {br_[0]} at night, {br_[1]} in the morning, {br_[2]} in the evening."],
   [22 * 60, ("The city heart stays in Manhattan all day" if in_man else "The city heart stays mostly in Manhattan") + f", the densest place for car trips: most hours at {' / '.join(city_z)}."],
 ]
+out_h = [h for h in range(24) if zboro.get(stats["heart_zone_by_hour"][h]) != "Manhattan"]
+if out_h:
+    h = out_h[0]
+    facts.append([h * 60, f"At {h:02d}:00 the city heart briefly leaves Manhattan: for that hour, {stats['heart_zone_by_hour'][h]} "
+                          f"({zboro[stats['heart_zone_by_hour'][h]]}) is where car trips are densest, before it glides back to Midtown."])
 facts = sorted(facts, key=lambda x: x[0])
 for i in range(1, len(facts)):                          # one fact at a time: each stays on screen for 75 minutes of the day
     facts[i][0] = max(facts[i][0], facts[i - 1][0] + 80)
