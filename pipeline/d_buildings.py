@@ -22,7 +22,7 @@ LANDMARKS = {"1015862": "Empire State Building", "1088469": "One World Trade Cen
              "1076262": "30 Rockefeller Plaza", "1087167": "Woolworth Building", "1087186": "New York Times Building"}
 
 f = IN / "buildings.csv"
-if not f.exists() or f.stat().st_size < 1e6:
+if not f.exists() or f.stat().st_size < 1000:
     with requests.get(URL, stream=True, timeout=(30, 3600), headers={"User-Agent": "30DMC26-NYC-Pulse"}) as r:
         r.raise_for_status()
         with open(f.with_suffix(".part"), "wb") as o:
@@ -55,7 +55,7 @@ print(f"in a taxi zone: {(g.z > 0).mean():.1%} · landmarks found: {sorted(set(g
 out = B / "buildings.geojsonl"
 g[["h", "z", "lm", "geometry"]].to_file(out, driver="GeoJSONSeq", COORDINATE_PRECISION=6)
 W.mkdir(parents=True, exist_ok=True)
-subprocess.run(["tippecanoe", "-o", str(W / "buildings.pmtiles"), "--force", "-l", "b", "-Z11", "-z15", "-P",
+subprocess.run(["tippecanoe", "-o", str(W / "buildings.pmtiles"), "--force", "-l", "b", "-Z11", "-z15", "-P", "-q",
                 "--drop-smallest-as-needed", "--simplification=2", "--maximum-tile-bytes=1500000",
                 "-y", "h", "-y", "z", "-y", "lm", str(out)], check=True)
 print(f"buildings.pmtiles: {(W / 'buildings.pmtiles').stat().st_size / 1e6:.1f} MB")

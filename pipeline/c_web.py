@@ -31,8 +31,8 @@ z["LocationID"] = z.LocationID.astype(int)
 z = z.dissolve("LocationID", aggfunc="first").reset_index()                     # a few IDs come in two pieces
 z = z[z.LocationID <= NZ].sort_values("LocationID")
 big = z.geometry.apply(lambda g: max(g.geoms, key=lambda p: p.area) if g.geom_type == "MultiPolygon" else g)
-z["cx"] = big.centroid.x; z["cy"] = big.centroid.y
-cen = gpd.GeoSeries(gpd.points_from_xy(z.cx, z.cy), crs=2263).to_crs(4326)
+z["px"] = big.centroid.x; z["py"] = big.centroid.y
+cen = gpd.GeoSeries(gpd.points_from_xy(z.px, z.py), crs=2263).to_crs(4326)
 z["lon"] = cen.x.round(5).values; z["lat"] = cen.y.round(5).values
 
 b = pd.read_parquet(B / "bins.parquet")
@@ -65,7 +65,7 @@ np.add.at(mat, (kk.h.values, kk.k.values), kk.r.round().astype(int).values)
 (W / "subway.json").write_text(json.dumps({"stations": st[["name", "boro", "lon", "lat"]].round(5).values.tolist(), "h": mat.tolist()}, separators=(",", ":")))
 
 # hearts (all modes) for stats and the GeoPackage
-xy = np.c_[z.cx.values, z.cy.values]
+xy = np.c_[z.px.values, z.py.values]
 hourly = tot.reshape(24, 6, NZ).sum(1)
 hx = (hourly @ xy) / hourly.sum(1, keepdims=True)
 sp = gpd.GeoSeries(gpd.points_from_xy(st.lon, st.lat), crs=4326).to_crs(2263)
@@ -139,7 +139,10 @@ facts = [
   [17 * 60 + 30, f"Evening rush, 17–20: {e_out:,.0f} car trips leave Manhattan, {e_in:,.0f} arrive."],
   [22 * 60, f"Over the day the taxi heart travels {stats['heart_path_km']} km, without leaving the city's middle."],
 ]
-stats["facts"] = sorted(facts, key=lambda x: x[0])
+facts = sorted(facts, key=lambda x: x[0])
+for i in range(1, len(facts)):                          # one fact at a time: each stays on screen for 75 minutes of the day
+    facts[i][0] = max(facts[i][0], facts[i - 1][0] + 80)
+stats["facts"] = [f for f in facts if f[0] < 1440]
 (W / "stats.json").write_text(json.dumps(stats, indent=1, ensure_ascii=False))
 import shutil; shutil.copy(gp, W / gp.name)
 for t_, s_ in stats["facts"]: print(f"{t_ // 60:02d}:{t_ % 60:02d}  {s_}")

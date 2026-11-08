@@ -155,7 +155,7 @@ function paintZones(st, hc) {
     const lo = mix(BASE, hc, 0.18), arr = ["#141a28"];
     for (let z = 1; z <= NZ; z++) { const v = vOf(st, z); arr.push(rgb(v < 0.6 ? mix(lo, hc, smooth(v / 0.6)) : mix(hc, [255, 246, 236], smooth((v - 0.6) / 0.4) * 0.55))); }
     map.setPaintProperty("bld", "fill-extrusion-color", ["case", ["!=", ["get", "lm"], ""], rgb(mix(hc, [255, 255, 255], 0.7)),
-      ["at", ["min", ["max", ["get", "z"], 0], NZ], ["literal", arr]]]);
+      ["to-color", ["at", ["min", ["max", ["coalesce", ["get", "z"], 0], 0], NZ], ["literal", arr]]]]);
   }
 }
 
@@ -195,16 +195,18 @@ function deckLayers(st, hc) {
   const upto = Math.floor(st.f);
   const trail = S.heart.slice(0, upto + 1).map(p => [p[0], p[1], ALT]); trail.push([st.heart[0], st.heart[1], ALT]);
   const tcol = trail.map((_, i) => [...hourColor(Math.min(i, st.f) * 10 + 5).map(Math.round), 255]);
-  L.push(new deck.PathLayer({ id: "trailGlow", data: [{ p: trail, c: tcol.map(c => [c[0], c[1], c[2], 60]) }], getPath: d => d.p, getColor: d => d.c,
-    widthMinPixels: 12, widthUnits: "pixels", getWidth: 12, jointRounded: true, capRounded: true, parameters: ADD, updateTriggers: { getPath: t, getColor: t } }));
-  L.push(new deck.PathLayer({ id: "trail", data: [{ p: trail, c: tcol }], getPath: d => d.p, getColor: d => d.c, widthMinPixels: 3, getWidth: 3, widthUnits: "pixels",
-    jointRounded: true, capRounded: true, parameters: ADD, updateTriggers: { getPath: t, getColor: t } }));
+  const seg = []; for (let i = 1; i < trail.length; i++) seg.push([trail[i - 1], trail[i], tcol[i]]);
+  L.push(new deck.LineLayer({ id: "trailGlow", data: seg, getSourcePosition: d => d[0], getTargetPosition: d => d[1], getColor: d => [d[2][0], d[2][1], d[2][2], 55],
+    getWidth: 12, widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t, getColor: t } }));
+  L.push(new deck.LineLayer({ id: "trail", data: seg, getSourcePosition: d => d[0], getTargetPosition: d => d[1], getColor: d => d[2],
+    getWidth: 3, widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t, getColor: t } }));
   const bpm = 46 + 74 * st.rate / (S.rateMax / 10), bt = beat(S.phase, bpm);
   const orbs = [{ p: st.heart, c: hc, s: 1, label: "taxi heart" }];
   if (S.layers.has("subway")) {
     const strail = S.subHeart.slice(0, upto + 1).map(p => [p[0], p[1], ALT]); strail.push([st.sheart[0], st.sheart[1], ALT]);
-    L.push(new deck.PathLayer({ id: "strail", data: [strail], getPath: d => d, getColor: [...ICE, 150], widthMinPixels: 2, getWidth: 2, widthUnits: "pixels",
-      jointRounded: true, parameters: ADD, updateTriggers: { getPath: t } }));
+    const sseg = []; for (let i = 1; i < strail.length; i++) sseg.push([strail[i - 1], strail[i]]);
+    L.push(new deck.LineLayer({ id: "strail", data: sseg, getSourcePosition: d => d[0], getTargetPosition: d => d[1], getColor: [...ICE, 150], getWidth: 2,
+      widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t } }));
     orbs.push({ p: st.sheart, c: ICE, s: 0.8, label: "subway heart" });
   }
   L.push(new deck.LineLayer({ id: "beam", data: orbs, getSourcePosition: d => [d.p[0], d.p[1], 0], getTargetPosition: d => [d.p[0], d.p[1], ALT],
