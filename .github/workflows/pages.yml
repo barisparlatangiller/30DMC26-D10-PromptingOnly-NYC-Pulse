@@ -22,11 +22,21 @@ jobs:
           pip install -r requirements.txt
           sudo apt-get update -q && sudo apt-get install -y -q tippecanoe > /dev/null
       - uses: actions/cache@v4
+        id: out
+        with:
+          path: out
+          key: out-${{ hashFiles('pipeline/*.py', 'requirements.txt') }}
+      - uses: actions/cache@v4
+        if: steps.out.outputs.cache-hit != 'true'
         with:
           path: input
           key: input-${{ github.run_id }}
           restore-keys: input-
+      - name: restore built data
+        if: steps.out.outputs.cache-hit == 'true'
+        run: mkdir -p docs/data && cp -r out/* docs/data/ && ls docs/data
       - name: pipeline
+        if: steps.out.outputs.cache-hit != 'true'
         shell: bash -eo pipefail {0}
         run: |
           mkdir -p logs input build
@@ -36,6 +46,7 @@ jobs:
           python pipeline/d_buildings.py 2>&1 | tee logs/d_buildings.log
           cp logs/*.log docs/data/
           du -sh docs/data/*
+          mkdir -p out && cp -r docs/data/* out/
       - uses: actions/upload-pages-artifact@v3
         with: { path: docs }
       - uses: actions/upload-artifact@v4
