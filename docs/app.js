@@ -252,7 +252,8 @@ function deckLayers(st, hc) {
   // landmarks
   const shown = [];                                                  // landmarks: hide labels that would overlap on screen
   for (const d of [...LANDMARKS].sort((a, b) => b[3] - a[3])) {
-    const p = map.project([d[1], d[2]]); const w = d[0].length * 7;
+    const vp = overlay._deck?.getViewports?.()[0];                  // project the label's own height, not the ground point
+    const p = vp ? (([x, y]) => ({ x, y }))(vp.project([d[1], d[2], d[3]])) : map.project([d[1], d[2]]); const w = d[0].length * 7;
     if (shown.every(q => Math.abs(q.p.x - p.x) > (w + q.w) / 2 + 8 || Math.abs(q.p.y - p.y) > 26)) shown.push({ d, p, w });
   }
   const LM = shown.map(q => q.d);
