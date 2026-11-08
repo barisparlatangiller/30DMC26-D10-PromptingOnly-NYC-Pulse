@@ -23,7 +23,7 @@ Made **only by prompting** an AI (Claude): every prompt is in [PROMPTS.md](PROMP
 - **Hearts** = where trips are densest at that moment: Gaussian kernel density (σ = 1 km) of pickups + drop-offs at the taxi-zone
   centres, peak found as a soft maximum. City heart: all zones; borough hearts: Brooklyn, Queens, the Bronx; subway heart: station entries.
   A trip-weighted mean was tried first and fell into the East River (most trips start outside Manhattan), so the density peak is used.
-- Moving lights = a reproducible 1-in-60 sample of real trips with real start time and duration. TLC records only start and end
+- Moving lights = a reproducible 1-in-30 sample of real trips with real start time and duration. TLC records only start and end
   zones, so each follows the fastest route on the OpenStreetMap drive network between the zone centres (road-class speeds,
   `pipeline/e_routes.py`): a modelled route, not the real one.
 - Every fact in the map is computed from the same data (`pipeline/c_web.py`).

@@ -25,7 +25,7 @@ BASE = "https://d37ci6vzurychx.cloudfront.net/trip-data/"
 SRC = {"yellow": ("yellow_tripdata_2026-06.parquet", "tpep_pickup_datetime", "tpep_dropoff_datetime"),
        "green": ("green_tripdata_2026-06.parquet", "lpep_pickup_datetime", "lpep_dropoff_datetime"),
        "hv": ("fhvhv_tripdata_2026-06.parquet", "pickup_datetime", "dropoff_datetime")}
-PER_DOT = 60                                    # one moving dot = about 60 real trips
+PER_DOT = 30                                    # one moving light = about 30 real trips
 
 
 def get(name):

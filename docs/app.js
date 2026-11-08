@@ -1,7 +1,7 @@
 /* NYC Pulse · #30DayMapChallenge 2026 · Day 10 · Prompting only
    One Tuesday in New York (16 June 2026), replayed: car trips (Yellow, Green, Uber/Lyft) and subway entries.
    Colour always means time of day. Buildings glow with the trips of their own taxi zone. */
-const NB = 144, NZ = 263, MODES = ["yellow", "green", "hv"];
+const NB = 144, NZ = 263, MODES = ["yellow", "green", "hv"], GROUP = { taxi: ["yellow", "green"], hv: ["hv"] };
 const HC = [[0, "#5145e8"], [240, "#2f6bf2"], [320, "#7a5cf5"], [375, "#f06bb6"], [480, "#ff7a7a"], [600, "#ffb83a"], [780, "#ffd25a"],
   [960, "#ff9640"], [1110, "#f0468f"], [1175, "#d94fd0"], [1290, "#8d5cf6"], [1440, "#5145e8"]];
 const ICE = [150, 225, 255], BASE = [34, 40, 58];
@@ -103,7 +103,7 @@ function prepDots() {                                  // each dot ≈ 60 real t
     const cum = [0]; for (let i = 1; i < path.length; i++) cum.push(cum[i - 1] + Math.hypot((path[i][0] - path[i - 1][0]) * 84.3, (path[i][1] - path[i - 1][1]) * 111.2));
     const L = cum[cum.length - 1] || 1, ts = cum.map(c => t0 + dur * c / L);
     const c = hourColor(t0);
-    S.dotsAll.push({ m, path, ts, c: [...mix(c, [255, 255, 255], 0.2).map(Math.round), 235] });
+    S.dotsAll.push({ m, path, ts, c: [...mix(c, [255, 255, 255], 0.2).map(Math.round), 220] });
   }
 }
 
@@ -207,7 +207,7 @@ function deckLayers(st, hc) {
   }
   if (S.layers.has("dots")) {
     L.push(new deck.TripsLayer({ id: "dots", data: S.dots, getPath: d => d.path, getTimestamps: d => d.ts, getColor: d => d.c,
-      currentTime: t, trailLength: 6, fadeTrail: true, widthMinPixels: 2.4, capRounded: true, jointRounded: true, opacity: 0.9, parameters: ADD }));
+      currentTime: t, trailLength: 7, fadeTrail: true, widthMinPixels: 2, capRounded: true, jointRounded: true, opacity: 0.9, parameters: ADD }));
   }
   // hearts: where trips are densest now — the city (all car trips), each borough, and the subway. Low above the ground, no parallax.
   const upto = Math.floor(st.f), bt = st.beat;
@@ -310,7 +310,7 @@ function zonePanel() {
 function zoneMarker() { const el = document.getElementById("zm"); if (el) { const x = (S.t % 1440) / 1440 * 300; el.setAttribute("x1", x); el.setAttribute("x2", x); } }
 
 function syncChips() {
-  document.querySelectorAll("[data-mode]").forEach(b => b.classList.toggle("on", S.modes.has(b.dataset.mode)));
+  document.querySelectorAll("[data-mode]").forEach(b => b.classList.toggle("on", GROUP[b.dataset.mode].every(m => S.modes.has(m))));
   document.querySelectorAll("[data-layer]").forEach(b => b.classList.toggle("on", S.layers.has(b.dataset.layer)));
 }
 function setT(t, jump) { S.t = ((t % 1440) + 1440) % 1440; if (jump) S.lastBuild = -99; }
@@ -358,7 +358,8 @@ async function main() {
   $("#t").oninput = e => { setT(+e.target.value, true); };
   $("#spd").onclick = () => { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : S.speed === 4 ? 0.5 : 1; $("#spd").textContent = S.speed + "×"; };
   document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
-    const m = b.dataset.mode; if (S.modes.has(m)) { if (S.modes.size > 1) S.modes.delete(m); } else S.modes.add(m); syncChips(); combine(); zonePanel(); });
+    const g = GROUP[b.dataset.mode], on = g.every(m => S.modes.has(m));
+    if (on) { if (S.modes.size > g.length) g.forEach(m => S.modes.delete(m)); } else g.forEach(m => S.modes.add(m)); syncChips(); combine(); zonePanel(); });
   document.querySelectorAll("[data-layer]").forEach(b => b.onclick = () => {
     const l = b.dataset.layer; S.layers.has(l) ? S.layers.delete(l) : S.layers.add(l); syncChips(); lastUI = -1; });
   $("#zx").onclick = () => { S.sel = null; zonePanel(); };

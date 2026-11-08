@@ -55,7 +55,14 @@ level with a ground halo, and explained them in the legend.
 routes (road-class speeds) between the zone centres of every sampled trip. All analyses stay the same; only the drawing changes,
 and the map says it is a modelled route.
 
-## 6 · What the AI built (summary)
+## 6 · Simplify
+> green taxiler nedir onu da anlayamadim bazi noktalarda tuhaflasiyor gibi hisediyorum anlamsizlasiyor, tüm cizgilerin hepsini en
+> kisa yollar uzerinden yapsak nasil olur mesela digleri gibi ve butuncul bakildiiginda daha one cikabilir mesela
+
+**AI:** merged the yellow and green toggles into "Taxis" (green Boro Taxis are 0.2 % of the day's trips); every moving light now
+follows a street route, and the sample was doubled (1 light ≈ 30 trips) so the main arteries read as streams of light.
+
+## 7 · What the AI built (summary)
 - `pipeline/a_taxi.py`: DuckDB over three monthly Parquet files → 10-minute pickups/drop-offs per zone, a 1-in-60 trip sample.
 - `pipeline/b_subway.py`: MTA hourly entries per station complex (SoQL aggregation).
 - `pipeline/c_web.py`: web layers, hearts, facts, QGIS GeoPackage.

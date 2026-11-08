@@ -33,8 +33,7 @@
 
 <section class="glass ctl" id="ctl">
   <div class="grp"><span class="lab">Trips</span>
-    <button class="chip on" data-mode="yellow"><i class="sw y"></i>Yellow taxi</button>
-    <button class="chip on" data-mode="green"><i class="sw g"></i>Green taxi</button>
+    <button class="chip on" data-mode="taxi" title="Yellow cabs and the green Boro Taxis (street hails outside central Manhattan; 0.2 % of trips)"><i class="sw y"></i>Taxis</button>
     <button class="chip on" data-mode="hv"><i class="sw h"></i>Uber · Lyft</button></div>
   <div class="grp"><span class="lab">Layers</span>
     <button class="chip on" data-layer="dots">Moving trips</button>
@@ -51,7 +50,7 @@
     <span><i class="k fill"></i>pickups</span><span><i class="k ring"></i>drop-offs</span>
     <span><i class="k heart"></i>city · borough hearts</span><span><i class="k sub"></i>subway heart</span>
   </div>
-  <div class="fine">A heart marks where trips are densest this hour: for all car trips (city), within Brooklyn, Queens and the Bronx, and for subway entries. Glow: trips per zone. Each moving light ≈ <b id="perDot">60</b> real trips with their real start time and duration, on the fastest street route between the zone centres (modelled: real routes are not published).</div>
+  <div class="fine">A heart marks where trips are densest this hour: for all car trips (city), within Brooklyn, Queens and the Bronx, and for subway entries. Glow: trips per zone. Each moving light ≈ <b id="perDot">30</b> real trips with their real start time and duration, on the fastest street route between the zone centres (modelled: real routes are not published).</div>
 </section>
 
 <section class="glass zone hidden" id="zone">
@@ -73,7 +72,7 @@
   <button class="x" id="ax" aria-label="close">×</button>
   <h2>About this map</h2>
   <p><b>Day.</b> Tuesday 16 June 2026, 00:00–23:59 New York time (EDT). TLC and MTA timestamps are local time.</p>
-  <p><b>Trips.</b> NYC TLC trip records for Yellow taxi, Green taxi and high-volume for-hire vehicles (Uber, Lyft). A pickup counts
+  <p><b>Trips.</b> NYC TLC trip records for Yellow taxis, Green "Boro" taxis (street hails only outside central Manhattan) and high-volume for-hire vehicles (Uber, Lyft). The toggle "Taxis" covers yellow and green. A pickup counts
     in the 10 minutes it starts, a drop-off in the 10 minutes it ends. Removed: unknown zones (264/265), trips under 1 minute or over 4 hours.</p>
   <p><b>Subway.</b> MTA Subway Hourly Ridership: entries per station complex and hour, all fare types.</p>
   <p><b>Hearts.</b> A heart marks where trips are densest at that moment: a kernel density of pickups + drop-offs at the taxi-zone
@@ -93,6 +92,6 @@
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pmtiles@3.2.1/dist/pmtiles.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/deck.gl@9.0.38/dist.min.js"></script>
-<script src="app.js?v=7"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>
