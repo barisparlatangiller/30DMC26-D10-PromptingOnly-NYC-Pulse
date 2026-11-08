@@ -189,8 +189,8 @@ function deckLayers(st, hc) {
   const zl = []; for (let z = 1; z <= NZ; z++) zl.push(z);
   if (S.layers.has("subway")) {
     L.push(new deck.ScatterplotLayer({ id: "sub", data: S.sub.stations.map((s, i) => [s[2], s[3], st.sv[i]]).filter(d => d[2] > 2),
-      getPosition: d => [d[0], d[1], 15], getRadius: d => 18 + Math.sqrt(d[2]) * 9, radiusUnits: "meters", getFillColor: [...ICE, 70],
-      stroked: true, getLineColor: [...ICE, 160], lineWidthMinPixels: 0.6, parameters: ADD, updateTriggers: { getRadius: t } }));
+      getPosition: d => [d[0], d[1], 15], getRadius: d => 12 + Math.sqrt(d[2]) * 4.5, radiusUnits: "meters", getFillColor: [...ICE, 55],
+      stroked: true, getLineColor: [...ICE, 140], lineWidthMinPixels: 0.5, parameters: ADD, updateTriggers: { getRadius: t } }));
   }
   if (S.layers.has("marks")) {
     L.push(new deck.ScatterplotLayer({ id: "pu", data: zl, getPosition: z => [S.cen[2 * z], S.cen[2 * z + 1], 20],
