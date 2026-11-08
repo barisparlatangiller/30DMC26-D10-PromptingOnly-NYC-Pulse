@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NYC Pulse</title>
+<meta name="description" content="#30DayMapChallenge 2026 · Day 10 · Prompting only. 24 hours of taxi, Uber/Lyft and subway trips in New York on Tuesday 16 June 2026, and where the city's heart beats.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<link href="style.css?v=1" rel="stylesheet">
+</head>
+<body>
+<div id="map"></div>
+<div id="vignette"></div>
+
+<section class="glass card" id="card">
+  <div class="eb">#30DayMapChallenge · Day 10 · Prompting only</div>
+  <h1>NYC Pulse</h1>
+  <p class="q">Where does New York's heart beat? 24 hours of taxi, Uber/Lyft and subway trips on one Tuesday.</p>
+  <div class="clock"><b id="clk">00:00</b><span>Tue 16 June 2026<br><i id="part">night</i></span></div>
+  <div class="now">
+    <div><b id="nTaxi">–</b><span>car trips starting this hour</span></div>
+    <div><b id="nSub">–</b><span>subway entries this hour</span></div>
+  </div>
+  <div class="bars" id="bars"></div>
+  <div class="bars-l"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+  <div class="heartline" id="heartTxt"></div>
+</section>
+
+<section class="glass fact" id="fact"><span class="lab">Did you know</span><p id="factT"></p></section>
+
+<section class="glass ctl" id="ctl">
+  <div class="grp"><span class="lab">Trips</span>
+    <button class="chip on" data-mode="yellow"><i class="sw y"></i>Yellow taxi</button>
+    <button class="chip on" data-mode="green"><i class="sw g"></i>Green taxi</button>
+    <button class="chip on" data-mode="hv"><i class="sw h"></i>Uber · Lyft</button></div>
+  <div class="grp"><span class="lab">Layers</span>
+    <button class="chip on" data-layer="dots">Moving trips</button>
+    <button class="chip on" data-layer="marks">Pickups · drop-offs</button>
+    <button class="chip on" data-layer="subway">Subway</button>
+    <button class="chip on" data-layer="cine">Cinematic camera</button></div>
+</section>
+
+<section class="glass legend" id="legend">
+  <div class="lab">Colour = time of day</div>
+  <div class="dayramp" id="ramp"></div>
+  <div class="ramp-l"><span>night</span><span>dawn</span><span>day</span><span>evening</span><span>night</span></div>
+  <div class="keys">
+    <span><i class="k fill"></i>pickups</span><span><i class="k ring"></i>drop-offs</span>
+    <span><i class="k heart"></i>taxi heart</span><span><i class="k sub"></i>subway heart</span>
+  </div>
+  <div class="fine">Height and glow: trips per zone. Each moving dot ≈ <b id="perDot">60</b> real trips, drawn as an arc between zone centres, not the route.</div>
+</section>
+
+<section class="glass zone hidden" id="zone">
+  <button class="x" id="zx" aria-label="close">×</button>
+  <div class="zb" id="zb"></div><h2 id="zn"></h2>
+  <svg id="spark" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
+  <div class="zk" id="zk"></div>
+</section>
+
+<section class="glass time" id="time">
+  <button id="play" aria-label="play / pause">❚❚</button>
+  <div class="track"><div class="grad" id="grad"></div><input id="t" type="range" min="0" max="1439" step="1" value="0">
+    <div class="ticks"><span>00</span><span>03</span><span>06</span><span>09</span><span>12</span><span>15</span><span>18</span><span>21</span><span>24</span></div></div>
+  <button id="spd">1×</button>
+  <button id="about-b">About</button>
+</section>
+
+<section class="glass about hidden" id="about">
+  <button class="x" id="ax" aria-label="close">×</button>
+  <h2>About this map</h2>
+  <p><b>Day.</b> Tuesday 16 June 2026, 00:00–23:59 New York time (EDT). TLC and MTA timestamps are local time.</p>
+  <p><b>Trips.</b> NYC TLC trip records for Yellow taxi, Green taxi and high-volume for-hire vehicles (Uber, Lyft). A pickup counts
+    in the 10 minutes it starts, a drop-off in the 10 minutes it ends. Removed: unknown zones (264/265), trips under 1 minute or over 4 hours.</p>
+  <p><b>Subway.</b> MTA Subway Hourly Ridership: entries per station complex and hour, all fare types.</p>
+  <p><b>Heart.</b> The trip-weighted centre of the taxi zones in that hour (pickups + drop-offs), and the entry-weighted centre of the
+    subway stations. It is a weighted centre of these trips, not where people are and not the single centre of New York. Airport trips
+    pull the taxi heart east.</p>
+  <p><b>Limits.</b> Taxi and ride-hail trips are not all traffic and not all people. Arcs connect zone centres; they are not real routes.
+    The animation replays measured data; it is not a forecast.</p>
+  <p class="fine">Data: NYC Taxi &amp; Limousine Commission trip records and taxi zones · MTA Subway Hourly Ridership (data.ny.gov) ·
+    basemap © CARTO, © OpenStreetMap contributors. Made only by prompting Claude (AI): see PROMPTS.md. Barış Parlatangiller ·
+    <a href="https://github.com/barisparlatangiller/30DMC26-D10-PromptingOnly-NYC-Pulse" target="_blank" rel="noopener">code</a> ·
+    <a href="data/nyc_pulse_2026-06-16.gpkg">GeoPackage</a> ·
+    <a href="https://barisparlatangiller.github.io/" target="_blank" rel="noopener">all maps</a></p>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pmtiles@3.2.1/dist/pmtiles.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/deck.gl@9.0.38/dist.min.js"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>

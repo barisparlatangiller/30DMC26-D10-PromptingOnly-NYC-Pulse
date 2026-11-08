@@ -1,0 +1,6 @@
+input/
+build/
+logs/
+__pycache__/
+media/frames/
+node_modules/
