@@ -46,7 +46,16 @@ outside Manhattan, the mean fell between Manhattan and Queens, on the East River
 the *density peak* (where trips are densest), added borough hearts for Brooklyn, Queens and the Bronx, lowered the hearts to street
 level with a ground halo, and explained them in the legend.
 
-## 5 · What the AI built (summary)
+## 5 · Routes
+> acaba moving tripleri,in hepsini gidilen rotaya gore en kisa yollari kullanarak gidilmesini hesaplasak böyle ucuyor gibi olmasi
+> tuhaf degil mi sence ? yada moving trips nedir mesela, analizlerin hepsi ayni kalsa sadece yollari takip ederek gitse mantikli
+> olur mu ve cok uzun surer mi ?
+
+**AI:** agreed: the arcs looked like flights. Added `pipeline/e_routes.py`: the OpenStreetMap drive network of New York, fastest
+routes (road-class speeds) between the zone centres of every sampled trip. All analyses stay the same; only the drawing changes,
+and the map says it is a modelled route.
+
+## 6 · What the AI built (summary)
 - `pipeline/a_taxi.py`: DuckDB over three monthly Parquet files → 10-minute pickups/drop-offs per zone, a 1-in-60 trip sample.
 - `pipeline/b_subway.py`: MTA hourly entries per station complex (SoQL aggregation).
 - `pipeline/c_web.py`: web layers, hearts, facts, QGIS GeoPackage.

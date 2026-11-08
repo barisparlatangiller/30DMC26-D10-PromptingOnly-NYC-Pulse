@@ -51,7 +51,7 @@
     <span><i class="k fill"></i>pickups</span><span><i class="k ring"></i>drop-offs</span>
     <span><i class="k heart"></i>city · borough hearts</span><span><i class="k sub"></i>subway heart</span>
   </div>
-  <div class="fine">A heart marks where trips are densest this hour: for all car trips (city), within Brooklyn, Queens and the Bronx, and for subway entries. Glow: trips per zone. Each moving dot ≈ <b id="perDot">60</b> real trips, drawn as an arc between zone centres, not the route.</div>
+  <div class="fine">A heart marks where trips are densest this hour: for all car trips (city), within Brooklyn, Queens and the Bronx, and for subway entries. Glow: trips per zone. Each moving light ≈ <b id="perDot">60</b> real trips with their real start time and duration, on the fastest street route between the zone centres (modelled: real routes are not published).</div>
 </section>
 
 <section class="glass zone hidden" id="zone">
@@ -80,10 +80,11 @@
     centres (1 km radius), and its peak. The city heart uses all car trips; the borough hearts only the zones of Brooklyn, Queens and
     the Bronx; the subway heart uses station entries. A plain average position was tried first: because most trips start outside
     Manhattan, it fell into the East River, so the density peak is used instead. Hearts show where trips concentrate, not where people are.</p>
-  <p><b>Limits.</b> Taxi and ride-hail trips are not all traffic and not all people. Arcs connect zone centres; they are not real routes.
+  <p><b>Limits.</b> Taxi and ride-hail trips are not all traffic and not all people. TLC records only start and end zones, so each moving light follows the fastest route on today's OpenStreetMap road network
+    between the two zone centres, using road-class speeds: a model, not the real route.
     The animation replays measured data; it is not a forecast.</p>
   <p class="fine">Data: NYC Taxi &amp; Limousine Commission trip records and taxi zones · MTA Subway Hourly Ridership (data.ny.gov) ·
-    basemap © CARTO, © OpenStreetMap contributors. Made only by prompting Claude (AI): see PROMPTS.md. Barış Parlatangiller ·
+    roads © OpenStreetMap contributors (ODbL) · basemap © CARTO. Made only by prompting Claude (AI): see PROMPTS.md. Barış Parlatangiller ·
     <a href="https://github.com/barisparlatangiller/30DMC26-D10-PromptingOnly-NYC-Pulse" target="_blank" rel="noopener">code</a> ·
     <a href="data/nyc_pulse_2026-06-16.gpkg">GeoPackage</a> ·
     <a href="https://barisparlatangiller.github.io/" target="_blank" rel="noopener">all maps</a></p>
@@ -92,6 +93,6 @@
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pmtiles@3.2.1/dist/pmtiles.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/deck.gl@9.0.38/dist.min.js"></script>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

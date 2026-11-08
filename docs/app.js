@@ -39,9 +39,9 @@ window.S = S;
 // ── data ──
 async function load() {
   const j = u => fetch(u).then(r => r.json());
-  const [zones, pulse, dots, sub, stats] = await Promise.all([j("data/zones.geojson?v=1"), j("data/pulse.json?v=1"), j("data/dots.json?v=1"),
-    j("data/subway.json?v=1"), j("data/stats.json?v=1")]);
-  Object.assign(S, { zones, pulse, dotsRaw: dots, sub, stats });
+  const [zones, pulse, dots, sub, stats, routes] = await Promise.all([j("data/zones.geojson?v=2"), j("data/pulse.json?v=2"), j("data/dots.json?v=2"),
+    j("data/subway.json?v=2"), j("data/stats.json?v=2"), j("data/routes.json?v=2").catch(() => ({}))]);
+  Object.assign(S, { zones, pulse, dotsRaw: dots, sub, stats, routes });
   S.cen = new Float64Array(2 * (NZ + 1)); S.zname = []; S.zboro = [];
   for (const f of zones.features) { const p = f.properties; S.cen[2 * p.id] = p.lon; S.cen[2 * p.id + 1] = p.lat; S.zname[p.id] = p.zone; S.zboro[p.id] = p.borough; }
   // subway: hourly → per 10-minute bin, smooth
@@ -89,17 +89,21 @@ function combine() {                                    // selected modes → sm
   bars(); S.lastBuild = -99;
 }
 
-function prepDots() {
+function prepDots() {                                  // each dot ≈ 60 real trips: real start and duration, modelled fastest street route
   S.dotsAll = [];
   for (const [m, o, d, t0, dur] of S.dotsRaw) {
-    const x0 = S.cen[2 * o], y0 = S.cen[2 * o + 1], x1 = S.cen[2 * d], y1 = S.cen[2 * d + 1]; if (!x0 || !x1) continue;
-    const dist = Math.hypot((x1 - x0) * 84000, (y1 - y0) * 111000), hgt = Math.min(1600, 120 + dist * 0.2);
-    const nx = -(y1 - y0), ny = x1 - x0, bend = 0.12;                        // a slight sideways bow so flows don't overlap
-    const path = [], ts = [];
-    for (let i = 0; i <= 14; i++) { const s = i / 14, b = Math.sin(Math.PI * s);
-      path.push([x0 + (x1 - x0) * s + nx * bend * b, y0 + (y1 - y0) * s + ny * bend * b, 40 + hgt * b]); ts.push(t0 + dur * s); }
+    const r = S.routes[`${o}-${d}`]; let path;
+    if (r && r.length >= 4) {
+      path = []; for (let i = 0; i < r.length; i += 2) path.push([r[i], r[i + 1], 6]);
+    } else {                                              // no street route (islands, unknown): a low arc between the zone centres
+      const x0 = S.cen[2 * o], y0 = S.cen[2 * o + 1], x1 = S.cen[2 * d], y1 = S.cen[2 * d + 1]; if (!x0 || !x1) continue;
+      const dist = Math.hypot((x1 - x0) * 84000, (y1 - y0) * 111000), hgt = Math.min(900, 80 + dist * 0.12);
+      path = []; for (let i = 0; i <= 12; i++) { const s = i / 12, b = Math.sin(Math.PI * s); path.push([x0 + (x1 - x0) * s, y0 + (y1 - y0) * s, 20 + hgt * b]); }
+    }
+    const cum = [0]; for (let i = 1; i < path.length; i++) cum.push(cum[i - 1] + Math.hypot((path[i][0] - path[i - 1][0]) * 84.3, (path[i][1] - path[i - 1][1]) * 111.2));
+    const L = cum[cum.length - 1] || 1, ts = cum.map(c => t0 + dur * c / L);
     const c = hourColor(t0);
-    S.dotsAll.push({ m, path, ts, c: [...mix(c, [255, 255, 255], 0.15).map(Math.round), 235] });
+    S.dotsAll.push({ m, path, ts, c: [...mix(c, [255, 255, 255], 0.2).map(Math.round), 235] });
   }
 }
 
@@ -203,7 +207,7 @@ function deckLayers(st, hc) {
   }
   if (S.layers.has("dots")) {
     L.push(new deck.TripsLayer({ id: "dots", data: S.dots, getPath: d => d.path, getTimestamps: d => d.ts, getColor: d => d.c,
-      currentTime: t, trailLength: 9, fadeTrail: true, widthMinPixels: 2.2, capRounded: true, jointRounded: true, opacity: 0.9, parameters: ADD }));
+      currentTime: t, trailLength: 6, fadeTrail: true, widthMinPixels: 2.4, capRounded: true, jointRounded: true, opacity: 0.9, parameters: ADD }));
   }
   // hearts: where trips are densest now — the city (all car trips), each borough, and the subway. Low above the ground, no parallax.
   const upto = Math.floor(st.f), bt = st.beat;

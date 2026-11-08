@@ -20,7 +20,7 @@ jobs:
         with: { python-version: "3.11", cache: pip }
       - run: |
           pip install -r requirements.txt
-          sudo apt-get update -q && sudo apt-get install -y -q tippecanoe > /dev/null
+          sudo apt-get update -q && sudo apt-get install -y -q tippecanoe osmium-tool > /dev/null
       - uses: actions/cache@v4
         id: out
         with:
@@ -44,6 +44,7 @@ jobs:
           python pipeline/b_subway.py 2>&1 | tee logs/b_subway.log
           python pipeline/c_web.py 2>&1 | tee logs/c_web.log
           python pipeline/d_buildings.py 2>&1 | tee logs/d_buildings.log
+          python pipeline/e_routes.py 2>&1 | tee logs/e_routes.log
           cp logs/*.log docs/data/
           du -sh docs/data/*
           mkdir -p out && cp -r docs/data/* out/
