@@ -103,7 +103,7 @@ function prepDots() {                                  // each light ≈ 30 real
     // streets: the modelled fastest street route (falls back to the arc where no route exists)
     const r = S.routes[`${o}-${d}`]; let street = arc;
     if (r && r.length >= 4) { street = []; for (let i = 0; i < r.length; i += 2) street.push([r[i], r[i + 1], 6]); }
-    const c = hourColor(t0), col = [...mix(c, [255, 255, 255], 0.2).map(Math.round), 220];
+    const c = hourColor(t0), col = [...mix(c, [255, 255, 255], 0.35).map(Math.round), 255];
     S.dotsAll.push({ m, arc, arcTs: timed(arc, t0, dur), street, streetTs: timed(street, t0, dur), c: col });
   }
 }
@@ -194,22 +194,22 @@ function deckLayers(st, hc) {
   }
   if (S.layers.has("marks")) {
     L.push(new deck.ScatterplotLayer({ id: "pu", data: zl, getPosition: z => [S.cen[2 * z], S.cen[2 * z + 1], 20],
-      getRadius: z => Math.sqrt(st.pu[z] * 6) * 8, radiusUnits: "meters", getFillColor: z => hcA(Math.round(25 + 95 * vOf(st, z))), parameters: ADD, updateTriggers: { getRadius: t, getFillColor: t } }));
+      getRadius: z => Math.sqrt(st.pu[z] * 6) * 6, radiusUnits: "meters", getFillColor: z => hcA(Math.round(12 + 60 * vOf(st, z))), parameters: ADD, updateTriggers: { getRadius: t, getFillColor: t } }));
     L.push(new deck.ScatterplotLayer({ id: "do", data: zl, getPosition: z => [S.cen[2 * z], S.cen[2 * z + 1], 22], filled: false, stroked: true,
-      getRadius: z => Math.sqrt(st.du[z] * 6) * 8 + 25, radiusUnits: "meters", getLineColor: z => hcA(Math.round(30 + 110 * vOf(st, z))), lineWidthMinPixels: 1, parameters: ADD,
+      getRadius: z => Math.sqrt(st.du[z] * 6) * 6 + 20, radiusUnits: "meters", getLineColor: z => hcA(Math.round(15 + 85 * vOf(st, z))), lineWidthMinPixels: 0.8, parameters: ADD,
       updateTriggers: { getRadius: t, getLineColor: t } }));
     const top = zl.map(z => [z, st.pu[z] + st.du[z]]).sort((a, b) => b[1] - a[1]).slice(0, 6);
     for (let k = 0; k < 3; k++) {
       const ph = (S.phase * 0.55 + k / 3) % 1;
       L.push(new deck.ScatterplotLayer({ id: "ring" + k, data: top, getPosition: d => [S.cen[2 * d[0]], S.cen[2 * d[0] + 1], 25], filled: false, stroked: true,
-        getRadius: d => (Math.sqrt(d[1] * 6) * 8) * (1 + ph * 2.6), radiusUnits: "meters", getLineColor: hcA(Math.round(210 * (1 - ph) ** 1.6)),
+        getRadius: d => (Math.sqrt(d[1] * 6) * 6) * (1 + ph * 2.6), radiusUnits: "meters", getLineColor: hcA(Math.round(210 * (1 - ph) ** 1.6)),
         lineWidthMinPixels: 2, parameters: ADD, updateTriggers: { getRadius: [t, ph], getLineColor: [t, ph] } }));
     }
   }
   if (S.layers.has("dots")) {
     const st_ = S.dotStyle === "arcs";
     L.push(new deck.TripsLayer({ id: "dots-" + S.dotStyle, data: S.dots, getPath: d => st_ ? d.arc : d.street, getTimestamps: d => st_ ? d.arcTs : d.streetTs, getColor: d => d.c,
-      currentTime: t, trailLength: 7, fadeTrail: true, widthMinPixels: 2, capRounded: true, jointRounded: true, opacity: 0.9, parameters: ADD }));
+      currentTime: t, trailLength: 7, fadeTrail: true, widthMinPixels: 2.6, capRounded: true, jointRounded: true, opacity: 0.9, parameters: ADD }));
   }
   // hearts: where trips are densest now — the city (all car trips), each borough, and the subway. Low above the ground, no parallax.
   const upto = Math.floor(st.f), bt = st.beat;
