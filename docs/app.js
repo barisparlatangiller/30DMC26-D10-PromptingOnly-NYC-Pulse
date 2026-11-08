@@ -11,8 +11,8 @@ const LANDMARKS = [
   ["JFK Airport", -73.7781, 40.6413, 160], ["LaGuardia Airport", -73.8740, 40.7769, 160], ["Barclays Center", -73.9754, 40.6826, 150],
   ["Yankee Stadium", -73.9262, 40.8296, 150], ["Coney Island", -73.9707, 40.5755, 150]];
 const CAM = [ // minute of day → camera; interpolated with a smooth spline
-  [0, -73.986, 40.733, 11.05, 56, -26], [210, -73.935, 40.705, 10.45, 50, -12], [400, -73.984, 40.748, 12.05, 62, -34],
-  [560, -73.978, 40.752, 12.35, 64, -52], [760, -73.905, 40.716, 10.6, 50, -22], [960, -73.982, 40.754, 12.2, 63, 6],
+  [0, -73.986, 40.733, 11.05, 56, -26], [210, -73.935, 40.712, 11.0, 48, -12], [400, -73.984, 40.748, 12.05, 62, -34],
+  [560, -73.978, 40.752, 12.35, 64, -52], [760, -73.915, 40.722, 11.05, 50, -22], [960, -73.982, 40.754, 12.2, 63, 6],
   [1110, -73.986, 40.745, 12.45, 65, 22], [1260, -73.962, 40.716, 11.7, 60, 42], [1440, -73.986, 40.733, 11.05, 56, 334]];
 
 const $ = s => document.querySelector(s);
@@ -103,7 +103,7 @@ let map, overlay;
 function initMap() {
   const proto = new pmtiles.Protocol(); maplibregl.addProtocol("pmtiles", proto.tile);
   map = S.map = new maplibregl.Map({ container: "map", style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-    center: [CAM[0][1], CAM[0][2]], zoom: CAM[0][3], pitch: CAM[0][4], bearing: CAM[0][5], maxPitch: 75, antialias: true, attributionControl: false });
+    center: [CAM[0][1], CAM[0][2]], zoom: CAM[0][3], pitch: CAM[0][4], bearing: CAM[0][5], maxPitch: 75, minZoom: 9, antialias: true, attributionControl: false });
   map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: "NYC TLC · MTA · NYC OpenData · © CARTO · © OpenStreetMap" }), "bottom-left");
   overlay = new deck.MapboxOverlay({ interleaved: false, layers: [] });
   map.addControl(overlay);
@@ -136,7 +136,7 @@ function addLayers() {
     map.addLayer({ id: "zf", type: "fill", source: "zones", paint: { "fill-color": "#000", "fill-opacity": 0 } }, sym);
     map.addLayer({ id: "zl", type: "line", source: "zones", paint: { "line-color": "#2a3550", "line-width": 0.4, "line-opacity": 0.5 } }, sym);
     map.addSource("bld", { type: "vector", url: "pmtiles://" + new URL("data/buildings.pmtiles", location.href).href, attribution: "NYC OpenData Building Footprints" });
-    map.addLayer({ id: "bld", type: "fill-extrusion", source: "bld", "source-layer": "b", minzoom: 10.5,
+    map.addLayer({ id: "bld", type: "fill-extrusion", source: "bld", "source-layer": "b", minzoom: 10.9,
       paint: { "fill-extrusion-height": ["get", "h"], "fill-extrusion-base": 0, "fill-extrusion-color": "#1a2030", "fill-extrusion-opacity": 0.97, "fill-extrusion-color-transition": { duration: 0 },
         "fill-extrusion-vertical-gradient": true } }, sym);
     map.on("click", "zf", e => { S.sel = e.features[0].properties.id; zonePanel(); });

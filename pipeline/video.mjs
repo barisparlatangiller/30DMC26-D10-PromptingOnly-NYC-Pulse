@@ -97,7 +97,7 @@ for (const fr of plan) {
   if (n > 0 && n % 45 === 0) { await br.close(); br = await chromium.launch({ args: ARGS }); page = await openPage(); }
   await page.evaluate(fr => {
     S.t = fr.t; S.phase = fr.phase;
-    const c = cam(fr.t); c.zoom -= 0.32;
+    const c = cam(fr.t); c.zoom = Math.max(11.02, c.zoom - 0.12);
     S.map.jumpTo(c);
     const st = S.render(), mm = Math.floor(fr.t);
     document.getElementById("vc").textContent = `${String(Math.floor(mm / 60)).padStart(2, "0")}:${String(mm % 60).padStart(2, "0")}`;
