@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
-<link href="style.css?v=3" rel="stylesheet">
+<link href="style.css?v=4" rel="stylesheet">
 </head>
 <body>
 <div id="map"></div>
@@ -37,6 +37,7 @@
     <button class="chip on" data-mode="hv"><i class="sw h"></i>Uber · Lyft</button></div>
   <div class="grp"><span class="lab">Layers</span>
     <button class="chip on" data-layer="dots">Moving trips</button>
+    <span class="seg2"><button class="on" data-style="streets" title="fastest street route between the zone centres (modelled)">Streets</button><button data-style="arcs" title="arc between the zone centres">Arcs</button></span>
     <button class="chip on" data-layer="marks">Pickups · drop-offs</button>
     <button class="chip on" data-layer="subway">Subway</button>
     <button class="chip on" data-layer="cine">Cinematic camera</button></div>
@@ -50,7 +51,7 @@
     <span><i class="k fill"></i>pickups</span><span><i class="k ring"></i>drop-offs</span>
     <span><i class="k heart"></i>city · borough hearts</span><span><i class="k sub"></i>subway heart</span>
   </div>
-  <div class="fine">A heart marks where trips are densest this hour: for all car trips (city), within Brooklyn, Queens and the Bronx, and for subway entries. Glow: trips per zone. Each moving light ≈ <b id="perDot">30</b> real trips with their real start time and duration, on the fastest street route between the zone centres (modelled: real routes are not published).</div>
+  <div class="fine">A heart marks where trips are densest this hour: for all car trips (city), within Brooklyn, Queens and the Bronx, and for subway entries. Glow: trips per zone. Each moving light ≈ <b id="perDot">30</b> real trips with their real start time and duration. Streets: the fastest street route between the zone centres (modelled; real routes are not published). Arcs: a direct bow between them.</div>
 </section>
 
 <section class="glass zone hidden" id="zone">

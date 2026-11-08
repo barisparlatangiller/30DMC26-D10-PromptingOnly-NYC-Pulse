@@ -32,7 +32,7 @@ function hourColor(m) {
 const partOfDay = m => m < 300 ? "night" : m < 600 ? "morning" : m < 960 ? "day" : m < 1200 ? "evening" : "night";
 const smooth = k => k * k * (3 - 2 * k);
 
-const S = { t: 0, playing: true, speed: 1, modes: new Set(MODES), layers: new Set(["dots", "marks", "subway", "cine"]), phase: 0, manual: false,
+const S = { dotStyle: "streets", t: 0, playing: true, speed: 1, modes: new Set(MODES), layers: new Set(["dots", "marks", "subway", "cine"]), phase: 0, manual: false,
   sel: null, lastBuild: -99, lastFact: null };
 window.S = S;
 
@@ -89,21 +89,22 @@ function combine() {                                    // selected modes → sm
   bars(); S.lastBuild = -99;
 }
 
-function prepDots() {                                  // each dot ≈ 60 real trips: real start and duration, modelled fastest street route
+function prepDots() {                                  // each light ≈ 30 real trips with their real start and duration
   S.dotsAll = [];
+  const timed = (path, t0, dur) => { const cum = [0];
+    for (let i = 1; i < path.length; i++) cum.push(cum[i - 1] + Math.hypot((path[i][0] - path[i - 1][0]) * 84.3, (path[i][1] - path[i - 1][1]) * 111.2));
+    const L = cum[cum.length - 1] || 1; return cum.map(c => t0 + dur * c / L); };
   for (const [m, o, d, t0, dur] of S.dotsRaw) {
-    const r = S.routes[`${o}-${d}`]; let path;
-    if (r && r.length >= 4) {
-      path = []; for (let i = 0; i < r.length; i += 2) path.push([r[i], r[i + 1], 6]);
-    } else {                                              // no street route (islands, unknown): a low arc between the zone centres
-      const x0 = S.cen[2 * o], y0 = S.cen[2 * o + 1], x1 = S.cen[2 * d], y1 = S.cen[2 * d + 1]; if (!x0 || !x1) continue;
-      const dist = Math.hypot((x1 - x0) * 84000, (y1 - y0) * 111000), hgt = Math.min(900, 80 + dist * 0.12);
-      path = []; for (let i = 0; i <= 12; i++) { const s = i / 12, b = Math.sin(Math.PI * s); path.push([x0 + (x1 - x0) * s, y0 + (y1 - y0) * s, 20 + hgt * b]); }
-    }
-    const cum = [0]; for (let i = 1; i < path.length; i++) cum.push(cum[i - 1] + Math.hypot((path[i][0] - path[i - 1][0]) * 84.3, (path[i][1] - path[i - 1][1]) * 111.2));
-    const L = cum[cum.length - 1] || 1, ts = cum.map(c => t0 + dur * c / L);
-    const c = hourColor(t0);
-    S.dotsAll.push({ m, path, ts, c: [...mix(c, [255, 255, 255], 0.2).map(Math.round), 220] });
+    const x0 = S.cen[2 * o], y0 = S.cen[2 * o + 1], x1 = S.cen[2 * d], y1 = S.cen[2 * d + 1]; if (!x0 || !x1) continue;
+    // arcs: a bow between the zone centres (the original look)
+    const dist = Math.hypot((x1 - x0) * 84000, (y1 - y0) * 111000), hgt = Math.min(1600, 120 + dist * 0.2);
+    const nx = -(y1 - y0), ny = x1 - x0, arc = [];
+    for (let i = 0; i <= 14; i++) { const s = i / 14, b = Math.sin(Math.PI * s); arc.push([x0 + (x1 - x0) * s + nx * 0.12 * b, y0 + (y1 - y0) * s + ny * 0.12 * b, 40 + hgt * b]); }
+    // streets: the modelled fastest street route (falls back to the arc where no route exists)
+    const r = S.routes[`${o}-${d}`]; let street = arc;
+    if (r && r.length >= 4) { street = []; for (let i = 0; i < r.length; i += 2) street.push([r[i], r[i + 1], 6]); }
+    const c = hourColor(t0), col = [...mix(c, [255, 255, 255], 0.2).map(Math.round), 220];
+    S.dotsAll.push({ m, arc, arcTs: timed(arc, t0, dur), street, streetTs: timed(street, t0, dur), c: col });
   }
 }
 
@@ -206,7 +207,8 @@ function deckLayers(st, hc) {
     }
   }
   if (S.layers.has("dots")) {
-    L.push(new deck.TripsLayer({ id: "dots", data: S.dots, getPath: d => d.path, getTimestamps: d => d.ts, getColor: d => d.c,
+    const st_ = S.dotStyle === "arcs";
+    L.push(new deck.TripsLayer({ id: "dots-" + S.dotStyle, data: S.dots, getPath: d => st_ ? d.arc : d.street, getTimestamps: d => st_ ? d.arcTs : d.streetTs, getColor: d => d.c,
       currentTime: t, trailLength: 7, fadeTrail: true, widthMinPixels: 2, capRounded: true, jointRounded: true, opacity: 0.9, parameters: ADD }));
   }
   // hearts: where trips are densest now — the city (all car trips), each borough, and the subway. Low above the ground, no parallax.
@@ -362,6 +364,8 @@ async function main() {
     if (on) { if (S.modes.size > g.length) g.forEach(m => S.modes.delete(m)); } else g.forEach(m => S.modes.add(m)); syncChips(); combine(); zonePanel(); });
   document.querySelectorAll("[data-layer]").forEach(b => b.onclick = () => {
     const l = b.dataset.layer; S.layers.has(l) ? S.layers.delete(l) : S.layers.add(l); syncChips(); lastUI = -1; });
+  document.querySelectorAll("[data-style]").forEach(b => b.onclick = () => { S.dotStyle = b.dataset.style;
+    document.querySelectorAll("[data-style]").forEach(x => x.classList.toggle("on", x === b)); });
   $("#zx").onclick = () => { S.sel = null; zonePanel(); };
   $("#about-b").onclick = () => $("#about").classList.remove("hidden"); $("#ax").onclick = () => $("#about").classList.add("hidden");
   document.addEventListener("keydown", e => { if (e.code === "Space" && e.target.tagName !== "INPUT") { e.preventDefault(); $("#play").click(); } });

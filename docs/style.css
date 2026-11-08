@@ -82,3 +82,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .pulse i { font-style: normal; font-size: 22px; color: var(--hc); text-shadow: 0 0 14px var(--hc); display: inline-block; width: 24px; text-align: center; will-change: transform; }
 .pulse b { color: var(--ink); font-size: 13px; }
 .heartline .hl { display: block; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink3); font-weight: 600; margin-bottom: 3px; }
+.seg2 { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.seg2 button { border: 0; background: rgba(255, 255, 255, .03); color: var(--ink3); font-size: 12px; padding: 5px 10px; }
+.seg2 button.on { background: rgba(255, 255, 255, .14); color: var(--ink); }

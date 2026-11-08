@@ -62,6 +62,10 @@ and the map says it is a modelled route.
 **AI:** merged the yellow and green toggles into "Taxis" (green Boro Taxis are 0.2 % of the day's trips); every moving light now
 follows a street route, and the sample was doubled (1 light ≈ 30 trips) so the main arteries read as streams of light.
 
+> moving trips ek olarak kalsin suanki haliyle ama dedigim yol takip etme de olsun opsiyon olarak secilebilrsin
+
+**AI:** kept both: a "Streets · Arcs" switch next to the moving trips (streets by default, arcs exactly as before).
+
 ## 7 · What the AI built (summary)
 - `pipeline/a_taxi.py`: DuckDB over three monthly Parquet files → 10-minute pickups/drop-offs per zone, a 1-in-60 trip sample.
 - `pipeline/b_subway.py`: MTA hourly entries per station complex (SoQL aggregation).
