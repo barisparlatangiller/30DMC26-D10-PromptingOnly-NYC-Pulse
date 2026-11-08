@@ -7,8 +7,7 @@ const HC = [[0, "#5145e8"], [240, "#2f6bf2"], [320, "#7a5cf5"], [375, "#f06bb6"]
 const ICE = [150, 225, 255], BASE = [16, 20, 32];
 const LANDMARKS = [
   ["One World Trade Center", -74.0134, 40.7127, 560], ["Empire State Building", -73.9857, 40.7484, 470], ["Chrysler Building", -73.9755, 40.7516, 350],
-  ["Times Square", -73.9855, 40.7580, 230], ["Grand Central", -73.9772, 40.7527, 200], ["Central Park", -73.9665, 40.7812, 160],
-  ["Penn Station · MSG", -73.9934, 40.7505, 190], ["Brooklyn Bridge", -73.9969, 40.7061, 150], ["Statue of Liberty", -74.0445, 40.6892, 160],
+  ["Times Square", -73.9855, 40.7580, 240], ["Central Park", -73.9665, 40.7812, 160], ["Brooklyn Bridge", -73.9969, 40.7061, 150], ["Statue of Liberty", -74.0445, 40.6892, 160],
   ["JFK Airport", -73.7781, 40.6413, 160], ["LaGuardia Airport", -73.8740, 40.7769, 160], ["Barclays Center", -73.9754, 40.6826, 150],
   ["Yankee Stadium", -73.9262, 40.8296, 150], ["Coney Island", -73.9707, 40.5755, 150]];
 const CAM = [ // minute of day → camera; interpolated with a smooth spline
@@ -109,7 +108,7 @@ function initMap() {
   overlay = new deck.MapboxOverlay({ interleaved: false, layers: [] });
   map.addControl(overlay);
   const stop = () => { if (S.layers.has("cine") && !S.manual) { S.layers.delete("cine"); syncChips(); } };
-  map.on("dragstart", stop); map.on("wheel", stop); map.on("rotatestart", stop); map.on("pitchstart", e => e.originalEvent && stop());
+  for (const ev of ["dragstart", "rotatestart", "pitchstart", "zoomstart"]) map.on(ev, e => e.originalEvent && stop());
 }
 
 function styleBase() {
@@ -117,10 +116,10 @@ function styleBase() {
     const id = l.id;
     try {
       if (/building/.test(id)) map.setLayoutProperty(id, "visibility", "none");
-      else if (l.type === "background") map.setPaintProperty(id, "background-color", "#03050a");
-      else if (/water/.test(id) && l.type === "fill") map.setPaintProperty(id, "fill-color", "#070d1b");
-      else if (l.type === "fill") map.setPaintProperty(id, "fill-color", "#05080f");
-      else if (l.type === "line" && /road|bridge|tunnel|rail/.test(id)) { map.setPaintProperty(id, "line-color", "#151c2c"); }
+      else if (l.type === "background") map.setPaintProperty(id, "background-color", "#070a12");
+      else if (/water/.test(id) && l.type === "fill") map.setPaintProperty(id, "fill-color", "#0a1830");
+      else if (l.type === "fill") map.setPaintProperty(id, "fill-color", "#080c15");
+      else if (l.type === "line" && /road|bridge|tunnel|rail/.test(id)) { map.setPaintProperty(id, "line-color", "#1c2539"); }
       else if (l.type === "line" && /water/.test(id)) map.setPaintProperty(id, "line-color", "#0c1426");
       else if (l.type === "symbol" && !/place_(city|town|suburb|villages|hamlet)|place_country|place_state/.test(id)) map.setLayoutProperty(id, "visibility", "none");
       else if (l.type === "symbol") { map.setPaintProperty(id, "text-color", "#4b5571"); map.setPaintProperty(id, "text-halo-color", "#03050a"); }
@@ -134,11 +133,11 @@ function addLayers() {
     styleBase();
     const sym = map.getStyle().layers.find(l => l.type === "symbol" && l.layout?.visibility !== "none")?.id;
     map.addSource("zones", { type: "geojson", data: S.zones, promoteId: "id" });
-    map.addLayer({ id: "zf", type: "fill", source: "zones", paint: { "fill-color": "#000", "fill-opacity": ["*", 0.55, ["coalesce", ["feature-state", "v"], 0]] } }, sym);
+    map.addLayer({ id: "zf", type: "fill", source: "zones", paint: { "fill-color": "#000", "fill-opacity": 0 } }, sym);
     map.addLayer({ id: "zl", type: "line", source: "zones", paint: { "line-color": "#2a3550", "line-width": 0.4, "line-opacity": 0.5 } }, sym);
     map.addSource("bld", { type: "vector", url: "pmtiles://" + new URL("data/buildings.pmtiles", location.href).href, attribution: "NYC OpenData Building Footprints" });
     map.addLayer({ id: "bld", type: "fill-extrusion", source: "bld", "source-layer": "b", minzoom: 10.5,
-      paint: { "fill-extrusion-height": ["get", "h"], "fill-extrusion-base": 0, "fill-extrusion-color": "#1a2030", "fill-extrusion-opacity": 0.96,
+      paint: { "fill-extrusion-height": ["get", "h"], "fill-extrusion-base": 0, "fill-extrusion-color": "#1a2030", "fill-extrusion-opacity": 0.97, "fill-extrusion-color-transition": { duration: 0 },
         "fill-extrusion-vertical-gradient": true } }, sym);
     map.on("click", "zf", e => { S.sel = e.features[0].properties.id; zonePanel(); });
     map.on("mousemove", "zf", () => (map.getCanvas().style.cursor = "pointer"));
@@ -147,16 +146,9 @@ function addLayers() {
   } catch (e) { console.warn(e); return false; }
 }
 
-function paintZones(st, hc) {
-  for (let z = 1; z <= NZ; z++) map.setFeatureState({ source: "zones", id: z }, { v: vOf(st, z) });
-  map.setPaintProperty("zf", "fill-color", rgb(hc));
-  if (Math.abs(S.t - S.lastBuild) >= (S.manual ? 0 : 2.5) || S.forceBuild) {      // buildings: one colour per taxi zone
-    S.lastBuild = S.t; S.forceBuild = false;
-    const lo = mix(BASE, hc, 0.18), arr = ["#141a28"];
-    for (let z = 1; z <= NZ; z++) { const v = vOf(st, z); arr.push(rgb(v < 0.6 ? mix(lo, hc, smooth(v / 0.6)) : mix(hc, [255, 246, 236], smooth((v - 0.6) / 0.4) * 0.55))); }
-    map.setPaintProperty("bld", "fill-extrusion-color", ["case", ["!=", ["get", "lm"], ""], rgb(mix(hc, [255, 255, 255], 0.7)),
-      ["to-color", ["at", ["min", ["max", ["coalesce", ["get", "z"], 0], 0], NZ], ["literal", arr]]]]);
-  }
+function paintZones(st, hc) {                                     // buildings: one uniform colour that breathes with the heartbeat
+  const bt = st.beat || 0;
+  map.setPaintProperty("bld", "fill-extrusion-color", rgb(mix(mix(BASE, hc, 0.16), [255, 255, 255], 0.03 + 0.05 * bt)));
 }
 
 // ── deck layers ──
@@ -167,6 +159,10 @@ function beat(phase, bpm) { const x = (phase * bpm / 60) % 1; return Math.exp(-(
 
 function deckLayers(st, hc) {
   const L = [], t = S.t, hcA = a => [...hc.map(Math.round), a];
+  const hot = mix(hc, [255, 244, 230], 0.35);
+  L.push(new deck.GeoJsonLayer({ id: "zlight", data: S.zones, filled: true, stroked: false, extruded: false,
+    getFillColor: f => { const v = vOf(st, f.properties.id); const c = v < 0.7 ? hc : mix(hc, hot, (v - 0.7) / 0.3); return [...c.map(Math.round), Math.round(255 * (0.03 + 0.62 * v * v))]; },
+    parameters: ADD, updateTriggers: { getFillColor: t } }));
   const zl = []; for (let z = 1; z <= NZ; z++) zl.push(z);
   if (S.layers.has("subway")) {
     L.push(new deck.ScatterplotLayer({ id: "sub", data: S.sub.stations.map((s, i) => [s[2], s[3], st.sv[i]]).filter(d => d[2] > 2),
@@ -200,7 +196,7 @@ function deckLayers(st, hc) {
     getWidth: 12, widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t, getColor: t } }));
   L.push(new deck.LineLayer({ id: "trail", data: seg, getSourcePosition: d => d[0], getTargetPosition: d => d[1], getColor: d => d[2],
     getWidth: 3, widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t, getColor: t } }));
-  const bpm = 46 + 74 * st.rate / (S.rateMax / 10), bt = beat(S.phase, bpm);
+  const bt = st.beat;
   const orbs = [{ p: st.heart, c: hc, s: 1, label: "taxi heart" }];
   if (S.layers.has("subway")) {
     const strail = S.subHeart.slice(0, upto + 1).map(p => [p[0], p[1], ALT]); strail.push([st.sheart[0], st.sheart[1], ALT]);
@@ -244,7 +240,9 @@ function ui(st, hc) {
   const c = rgb(hc); document.documentElement.style.setProperty("--hc", c);
   const mm = Math.floor(S.t) % 1440; $("#clk").textContent = `${String(Math.floor(mm / 60)).padStart(2, "0")}:${String(mm % 60).padStart(2, "0")}`;
   $("#t").value = mm;
-  if (Math.floor(S.t / 2) === lastUI) return; lastUI = Math.floor(S.t / 2);
+  $("#hb").style.transform = `scale(${(1 + 0.32 * st.beat).toFixed(3)})`;
+  if (Math.floor(S.t / 2) === lastUI) return;
+  $("#pr").textContent = fmt(st.rate); lastUI = Math.floor(S.t / 2);
   $("#part").textContent = partOfDay(mm);
   $("#nTaxi").textContent = fmt(st.rate * 60); $("#nSub").textContent = fmt(st.sv.reduce((a, b) => a + b, 0) * 6);
   const h = Math.floor(mm / 60); $("#bars").querySelectorAll("i").forEach((el, i) => el.classList.toggle("on", i === h));
@@ -293,6 +291,7 @@ function cam(t) {
 // ── loop ──
 function frame(st) {
   const hc = hourColor(S.t);
+  st.bpm = 46 + 74 * st.rate / (S.rateMax / 10); st.beat = beat(S.phase, st.bpm);
   paintZones(st, hc);
   overlay.setProps({ layers: deckLayers(st, hc) });
   ui(st, hc);

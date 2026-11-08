@@ -78,3 +78,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .fact p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--ink); }
 .fact .lab { color: var(--hc); }
 @media (max-width: 900px) { .fact { top: auto; bottom: 150px; width: calc(100% - 36px); min-width: 0; } }
+.pulse { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 11.5px; color: var(--ink3); line-height: 1.35; }
+.pulse i { font-style: normal; font-size: 22px; color: var(--hc); text-shadow: 0 0 14px var(--hc); display: inline-block; width: 24px; text-align: center; will-change: transform; }
+.pulse b { color: var(--ink); font-size: 13px; }
