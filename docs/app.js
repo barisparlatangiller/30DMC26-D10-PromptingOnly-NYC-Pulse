@@ -4,7 +4,7 @@
 const NB = 144, NZ = 263, MODES = ["yellow", "green", "hv"];
 const HC = [[0, "#5145e8"], [240, "#2f6bf2"], [320, "#7a5cf5"], [375, "#f06bb6"], [480, "#ff7a7a"], [600, "#ffb83a"], [780, "#ffd25a"],
   [960, "#ff9640"], [1110, "#f0468f"], [1175, "#d94fd0"], [1290, "#8d5cf6"], [1440, "#5145e8"]];
-const ICE = [150, 225, 255], BASE = [16, 20, 32];
+const ICE = [150, 225, 255], BASE = [34, 40, 58];
 const LANDMARKS = [
   ["One World Trade Center", -74.0134, 40.7127, 560], ["Empire State Building", -73.9857, 40.7484, 470], ["Chrysler Building", -73.9755, 40.7516, 350],
   ["Times Square", -73.9855, 40.7580, 240], ["Central Park", -73.9665, 40.7812, 160], ["Brooklyn Bridge", -73.9969, 40.7061, 150], ["Statue of Liberty", -74.0445, 40.6892, 160],
@@ -121,8 +121,8 @@ function styleBase() {
       else if (l.type === "fill") map.setPaintProperty(id, "fill-color", "#080c15");
       else if (l.type === "line" && /road|bridge|tunnel|rail/.test(id)) { map.setPaintProperty(id, "line-color", "#1c2539"); }
       else if (l.type === "line" && /water/.test(id)) map.setPaintProperty(id, "line-color", "#0c1426");
-      else if (l.type === "symbol" && !/place_(city|town|suburb|villages|hamlet)|place_country|place_state/.test(id)) map.setLayoutProperty(id, "visibility", "none");
-      else if (l.type === "symbol") { map.setPaintProperty(id, "text-color", "#4b5571"); map.setPaintProperty(id, "text-halo-color", "#03050a"); }
+      else if (l.type === "symbol" && !/place_(city|town|suburb)/.test(id)) map.setLayoutProperty(id, "visibility", "none");
+      else if (l.type === "symbol") { map.setPaintProperty(id, "text-color", "#39425a"); map.setPaintProperty(id, "text-halo-color", "#03050a"); }
     } catch (e) {}
   }
 }
@@ -161,7 +161,7 @@ function deckLayers(st, hc) {
   const L = [], t = S.t, hcA = a => [...hc.map(Math.round), a];
   const hot = mix(hc, [255, 244, 230], 0.35);
   L.push(new deck.GeoJsonLayer({ id: "zlight", data: S.zones, filled: true, stroked: false, extruded: false,
-    getFillColor: f => { const v = vOf(st, f.properties.id); const c = v < 0.7 ? hc : mix(hc, hot, (v - 0.7) / 0.3); return [...c.map(Math.round), Math.round(255 * (0.03 + 0.62 * v * v))]; },
+    getFillColor: f => { const v = vOf(st, f.properties.id); const c = v < 0.7 ? hc : mix(hc, hot, (v - 0.7) / 0.3); return [...c.map(Math.round), Math.round(255 * 0.7 * Math.pow(v, 2.6))]; },
     parameters: ADD, updateTriggers: { getFillColor: t } }));
   const zl = []; for (let z = 1; z <= NZ; z++) zl.push(z);
   if (S.layers.has("subway")) {
@@ -171,15 +171,15 @@ function deckLayers(st, hc) {
   }
   if (S.layers.has("marks")) {
     L.push(new deck.ScatterplotLayer({ id: "pu", data: zl, getPosition: z => [S.cen[2 * z], S.cen[2 * z + 1], 20],
-      getRadius: z => Math.sqrt(st.pu[z] * 6) * 14, radiusUnits: "meters", getFillColor: hcA(95), parameters: ADD, updateTriggers: { getRadius: t, getFillColor: t } }));
+      getRadius: z => Math.sqrt(st.pu[z] * 6) * 8, radiusUnits: "meters", getFillColor: z => hcA(Math.round(40 + 120 * vOf(st, z))), parameters: ADD, updateTriggers: { getRadius: t, getFillColor: t } }));
     L.push(new deck.ScatterplotLayer({ id: "do", data: zl, getPosition: z => [S.cen[2 * z], S.cen[2 * z + 1], 22], filled: false, stroked: true,
-      getRadius: z => Math.sqrt(st.du[z] * 6) * 14, radiusUnits: "meters", getLineColor: hcA(200), lineWidthMinPixels: 1.4, parameters: ADD,
+      getRadius: z => Math.sqrt(st.du[z] * 6) * 8 + 25, radiusUnits: "meters", getLineColor: z => hcA(Math.round(50 + 150 * vOf(st, z))), lineWidthMinPixels: 1, parameters: ADD,
       updateTriggers: { getRadius: t, getLineColor: t } }));
     const top = zl.map(z => [z, st.pu[z] + st.du[z]]).sort((a, b) => b[1] - a[1]).slice(0, 6);
     for (let k = 0; k < 3; k++) {
       const ph = (S.phase * 0.55 + k / 3) % 1;
       L.push(new deck.ScatterplotLayer({ id: "ring" + k, data: top, getPosition: d => [S.cen[2 * d[0]], S.cen[2 * d[0] + 1], 25], filled: false, stroked: true,
-        getRadius: d => (Math.sqrt(d[1] * 6) * 14) * (1 + ph * 2.2), radiusUnits: "meters", getLineColor: hcA(Math.round(210 * (1 - ph) ** 1.6)),
+        getRadius: d => (Math.sqrt(d[1] * 6) * 8) * (1 + ph * 2.6), radiusUnits: "meters", getLineColor: hcA(Math.round(210 * (1 - ph) ** 1.6)),
         lineWidthMinPixels: 2, parameters: ADD, updateTriggers: { getRadius: [t, ph], getLineColor: [t, ph] } }));
     }
   }
@@ -222,7 +222,8 @@ function deckLayers(st, hc) {
     getColor: [220, 228, 245, 90], getWidth: 1, widthUnits: "pixels" }));
   L.push(new deck.TextLayer({ id: "lmT", data: LANDMARKS, getPosition: d => [d[1], d[2], d[3]], getText: d => d[0], getSize: 11.5, getColor: [225, 232, 248, 230],
     getPixelOffset: [0, -8], getTextAnchor: "middle", getAlignmentBaseline: "bottom", fontFamily: "Inter, sans-serif", fontWeight: 600, characterSet: "auto",
-    outlineWidth: 2.5, outlineColor: [3, 5, 10, 230], fontSettings: { sdf: true }, billboard: true, parameters: { depthCompare: "always" } }));
+    outlineWidth: 2.5, outlineColor: [3, 5, 10, 230], fontSettings: { sdf: true }, billboard: true, parameters: { depthCompare: "always" },
+    extensions: [new deck.CollisionFilterExtension()], getCollisionPriority: d => d[3], collisionTestProps: { sizeScale: 1.6 } }));
   return L;
 }
 
