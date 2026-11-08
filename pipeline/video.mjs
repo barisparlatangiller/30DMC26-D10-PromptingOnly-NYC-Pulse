@@ -39,6 +39,7 @@ let br = await chromium.launch({ args: ARGS });
   console.log("thumbnail", new Date().toISOString());
   await p.close();
 }
+if (process.env.THUMB_ONLY) { await br.close(); process.exit(0); }
 
 const CSS = `
   .card, .ctl, .legend, .time, .zone, .about, .fact, .maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right { display: none !important; }
