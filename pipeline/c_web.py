@@ -25,7 +25,8 @@ MODES = ["yellow", "green", "hv"]
 f = IN / "taxi_zones.zip"
 if not f.exists():
     r = requests.get("https://d37ci6vzurychx.cloudfront.net/misc/taxi_zones.zip", timeout=300); r.raise_for_status(); f.write_bytes(r.content)
-z = gpd.read_file(f"zip://{f}").to_crs(2263)
+zipfile.ZipFile(f).extractall(IN / "taxi_zones")
+z = gpd.read_file(next((IN / "taxi_zones").rglob("*.shp"))).to_crs(2263)
 z["LocationID"] = z.LocationID.astype(int)
 z = z.dissolve("LocationID", aggfunc="first").reset_index()                     # a few IDs come in two pieces
 z = z[z.LocationID <= NZ].sort_values("LocationID")

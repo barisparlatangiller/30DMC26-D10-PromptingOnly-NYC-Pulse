@@ -42,7 +42,7 @@ g = gpd.GeoDataFrame({"bin": t["bin"].values, "h": pd.to_numeric(t[hcol], errors
 g = g[(g.h > 2) & g.geometry.notna() & ~g.geometry.is_empty]
 print(f"{len(g):,} buildings with height", flush=True)
 
-z = gpd.read_file(f"zip://{IN / 'taxi_zones.zip'}").to_crs(4326)[["LocationID", "geometry"]]
+z = gpd.read_file(next((IN / "taxi_zones").rglob("*.shp"))).to_crs(4326)[["LocationID", "geometry"]]
 z["LocationID"] = z.LocationID.astype(int)
 pt = gpd.GeoDataFrame(geometry=g.representative_point(), crs=4326)
 j = gpd.sjoin(pt, z, how="left", predicate="within")
