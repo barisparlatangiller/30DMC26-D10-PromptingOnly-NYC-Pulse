@@ -1,9 +1,10 @@
 """
 Web layers and a QGIS GeoPackage.
 
-  heart of the hour = trip-weighted mean position of the taxi-zone centres (pickups + drop-offs in that hour);
-                      for the subway, entry-weighted mean position of the station complexes.
-  It is a weighted centre of these trips, not where people are, and not "the" centre of New York.
+  heart of the hour = the place where trips are densest in that hour: a kernel density of pickups + drop-offs at the
+                      taxi-zone centres (Gaussian, σ = 1 km), and its peak found as a soft maximum (density^10 weighted).
+                      City heart = all zones; borough hearts = zones of Brooklyn, Queens, the Bronx; subway heart = station entries.
+  (A plain weighted mean was tried first; with most trips outside Manhattan it fell into the East River and said little.)
 
   python pipeline/c_web.py
 Output  docs/data/zones.geojson · pulse.json · dots.json · subway.json · stats.json · build/nyc_pulse_2026-06-16.gpkg
@@ -67,14 +68,24 @@ np.add.at(mat, (kk.h.values, kk.k.values), kk.r.round().astype(int).values)
 # hearts (all modes) for stats and the GeoPackage
 xy = np.c_[z.px.values, z.py.values]
 hourly = tot.reshape(24, 6, NZ).sum(1)
-hx = (hourly @ xy) / hourly.sum(1, keepdims=True)
+SIG = 3281.0                                                     # 1 km in feet (EPSG:2263)
+def kde_heart(w, P, idx=None, k=10):
+    d2 = ((P[:, None, :] - P[None, :, :]) ** 2).sum(-1)
+    D = w @ np.exp(-d2 / (2 * SIG ** 2))
+    if idx is not None: D, P = D[:, idx], P[idx]
+    q = (D / np.maximum(D.max(1, keepdims=True), 1e-9)) ** k
+    return (q @ P) / q.sum(1, keepdims=True)
+hx = kde_heart(hourly.astype(float), xy)
+BOROS = [b for b in ("Brooklyn", "Queens", "Bronx") if (z.borough == b).any()]
+bh = {b: kde_heart(hourly.astype(float), xy, np.flatnonzero(z.borough.values == b)) for b in BOROS}
 sp = gpd.GeoSeries(gpd.points_from_xy(st.lon, st.lat), crs=4326).to_crs(2263)
 sxy = np.c_[sp.x.values, sp.y.values]
-sh = (mat @ sxy) / np.maximum(mat.sum(1, keepdims=True), 1)
+sh = kde_heart(mat.astype(float), sxy)
 to4326 = lambda p: gpd.GeoSeries(gpd.points_from_xy(p[:, 0], p[:, 1]), crs=2263).to_crs(4326)
 heart = gpd.GeoDataFrame({"hour": range(24), "trips": hourly.sum(1)}, geometry=gpd.points_from_xy(hx[:, 0], hx[:, 1]), crs=2263)
 sheart = gpd.GeoDataFrame({"hour": range(24), "entries": mat.sum(1)}, geometry=gpd.points_from_xy(sh[:, 0], sh[:, 1]), crs=2263)
-trail = gpd.GeoDataFrame({"layer": ["taxi heart", "subway heart"]}, geometry=[LineString(hx), LineString(sh)], crs=2263)
+trail = gpd.GeoDataFrame({"layer": ["city heart", "subway heart"] + [f"{b} heart" for b in BOROS]},
+                         geometry=[LineString(hx), LineString(sh)] + [LineString(bh[b]) for b in BOROS], crs=2263)
 
 zz = z[["LocationID", "zone", "borough", "geometry"]].copy()
 zz["pickups"] = sum(arr[m]["pu"] for m in MODES).sum(0)[zz.LocationID - 1]
@@ -87,7 +98,7 @@ gp = B / "nyc_pulse_2026-06-16.gpkg"
 gp.unlink(missing_ok=True)
 zz.to_file(gp, layer="taxi_zones_day")
 zz.merge(long.pivot_table(index=["LocationID", "hour"], columns="kind", values="trips", aggfunc="sum").reset_index(), on="LocationID").to_file(gp, layer="hourly_pulse")
-heart.to_file(gp, layer="taxi_heart_points"); sheart.to_file(gp, layer="subway_heart_points"); trail.to_file(gp, layer="heart_trails")
+heart.to_file(gp, layer="city_heart_points"); sheart.to_file(gp, layer="subway_heart_points"); trail.to_file(gp, layer="heart_trails")
 gpd.GeoDataFrame(st, geometry=gpd.points_from_xy(st.lon, st.lat), crs=4326).to_file(gp, layer="subway_stations")
 
 qa = json.loads((B / "qa.json").read_text())
@@ -104,6 +115,9 @@ stats = {"day": "2026-06-16", "weekday": "Tuesday", "timezone": "America/New_Yor
 nearest = lambda p: names[int(np.argmin(((xy - p) ** 2).sum(1))) + 1]
 stats["heart_zone_by_hour"] = [nearest(hx[h]) for h in range(24)]
 stats["subway_heart_zone_by_hour"] = [nearest(sh[h]) for h in range(24)]
+stats["boro_heart_zone_by_hour"] = {b: [nearest(bh[b][h]) for h in range(24)] for b in BOROS}
+snear = lambda p: st.name[int(np.argmin(((sxy - p) ** 2).sum(1)))]
+stats["subway_heart_station_by_hour"] = [snear(sh[h]) for h in range(24)]
 (W / "stats.json").write_text(json.dumps(stats, indent=1, ensure_ascii=False))
 print(json.dumps({k: v for k, v in stats.items() if k not in ("heart", "subway_heart")}, indent=1, ensure_ascii=False))
 
@@ -120,14 +134,20 @@ man = np.array([boro[i + 1] == "Manhattan" for i in range(NZ)])
 hr = lambda a, h0, h1: a.reshape(24, 6, NZ)[h0:h1].sum((0, 1))
 m_in, m_out = hr(do_all, 7, 10)[man].sum(), hr(pu_all, 7, 10)[man].sum()
 e_in, e_out = hr(do_all, 17, 20)[man].sum(), hr(pu_all, 17, 20)[man].sum()
-east = int(np.argmax(hx[:, 0]))
+bz = stats["boro_heart_zone_by_hour"]
+qa_ = [bz["Queens"][1], bz["Queens"][9], bz["Queens"][22]]
+zboro = dict(zip(z.zone, z.borough))
+in_man = all(zboro.get(n) == "Manhattan" for n in stats["heart_zone_by_hour"])
+br_ = [bz["Brooklyn"][2], bz["Brooklyn"][8], bz["Brooklyn"][20]]
+from collections import Counter
+city_z = [n for n, _ in Counter(stats["heart_zone_by_hour"]).most_common(3)]
 topz = int(tot.sum(0).argmax()); topz_peak = int(tot.reshape(24, 6, NZ).sum(1)[:, topz].argmax())
 night = int(hr(pu_all + do_all, 0, 4).argmax())
 sub_day = mat.sum(0); ts = int(sub_day.argmax())
 ratio8 = mat[8].sum() / max(1, hourly[8].sum() / 2)
 facts = [
   [int(qb * 10), f"The quietest 10 minutes: {hm(qb)}. Only {per_bin[qb] / 10:,.0f} car trips a minute start across the whole city."],
-  [int(east * 60), f"At {east:02d}:00 the taxi heart drifts furthest east, to {stats['heart_zone_by_hour'][east]}: in the small hours, airport runs weigh more."],
+  [9 * 60 + 30, f"Queens has its own heart: at 01:00 it sits at {qa_[0]}, by 09:00 at {qa_[1]}, at 22:00 in {qa_[2]}."],
   [60, f"After midnight the busiest zone is {names[night + 1]} ({boro[night + 1]})."],
   [7 * 60 + 30, f"Morning rush, 7–10: {m_in:,.0f} car trips end in Manhattan, {m_out:,.0f} start there."],
   [8 * 60 + 20, f"At 8:00, about {ratio8:,.0f} people enter the subway for every car trip that starts."],
@@ -137,7 +157,8 @@ facts = [
   [int(topz_peak * 60), f"{names[topz + 1]} is the day's busiest zone, peaking at {topz_peak:02d}:00."],
   [int(mat[:, ts].argmax() * 60), f"The busiest subway station: {st.name[ts]}, {sub_day[ts]:,} entries; most at {int(mat[:, ts].argmax()):02d}:00."],
   [17 * 60 + 30, f"Evening rush, 17–20: {e_out:,.0f} car trips leave Manhattan, {e_in:,.0f} arrive."],
-  [22 * 60, f"Over the day the taxi heart travels {stats['heart_path_km']} km, without leaving the city's middle."],
+  [20 * 60 + 30, f"Brooklyn's heart moves: {br_[0]} at night, {br_[1]} in the morning, {br_[2]} in the evening."],
+  [22 * 60, ("The city heart stays in Manhattan all day" if in_man else "The city heart stays mostly in Manhattan") + f", the densest place for car trips: most hours at {' / '.join(city_z)}."],
 ]
 facts = sorted(facts, key=lambda x: x[0])
 for i in range(1, len(facts)):                          # one fact at a time: each stays on screen for 75 minutes of the day

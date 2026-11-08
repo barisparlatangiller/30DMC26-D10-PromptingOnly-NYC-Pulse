@@ -34,7 +34,19 @@ Tuesday 16 June 2026 (from the pack), proposed the plan and asked three question
 with light lines; a beating heart whose rate follows trips per minute; data-driven "did you know" facts that appear at the
 right time of day; smooth 10-minute interpolation, temporal smoothing and a spline camera.
 
-## 4 · What the AI built (summary)
+## 4 · Review
+> video bittiktiken sonra taxi heart subway heart anlamadim ne oldugun ve sanki sacma sekilde deniz yuzeinde falan, acaba
+> koordinatlari uygun mi birbirilerine tai heart mesela manhattanda daha cok olmasi gerekmez mi willimsburg gibi duruyor burda
+> teknik hatalar olabilir mi ? . bunu proje bittikten sorna tekrarn kontrol et, dogru oldugunu dusunuyorsa birak ama degilse
+> guncellemeleri yapmani istiyorum. simdi sen kendi basian birakiyorum, buna göre hatalar olursa kendin duzeltmelisin benim icin
+> proje bitmis olmali en osn halinde
+
+**AI:** checked the coordinates (correct) and found the real cause: the heart was a trip-weighted *mean*. With 55–70 % of trips
+outside Manhattan, the mean fell between Manhattan and Queens, on the East River; floating 620 m up added parallax. Replaced it with
+the *density peak* (where trips are densest), added borough hearts for Brooklyn, Queens and the Bronx, lowered the hearts to street
+level with a ground halo, and explained them in the legend.
+
+## 5 · What the AI built (summary)
 - `pipeline/a_taxi.py`: DuckDB over three monthly Parquet files → 10-minute pickups/drop-offs per zone, a 1-in-60 trip sample.
 - `pipeline/b_subway.py`: MTA hourly entries per station complex (SoQL aggregation).
 - `pipeline/c_web.py`: web layers, hearts, facts, QGIS GeoPackage.

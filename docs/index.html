@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
-<link href="style.css?v=2" rel="stylesheet">
+<link href="style.css?v=3" rel="stylesheet">
 </head>
 <body>
 <div id="map"></div>
@@ -49,9 +49,9 @@
   <div class="ramp-l"><span>night</span><span>dawn</span><span>day</span><span>evening</span><span>night</span></div>
   <div class="keys">
     <span><i class="k fill"></i>pickups</span><span><i class="k ring"></i>drop-offs</span>
-    <span><i class="k heart"></i>taxi heart</span><span><i class="k sub"></i>subway heart</span>
+    <span><i class="k heart"></i>city · borough hearts</span><span><i class="k sub"></i>subway heart</span>
   </div>
-  <div class="fine">Height and glow: trips per zone. Each moving dot ≈ <b id="perDot">60</b> real trips, drawn as an arc between zone centres, not the route.</div>
+  <div class="fine">A heart marks where trips are densest this hour: for all car trips (city), within Brooklyn, Queens and the Bronx, and for subway entries. Glow: trips per zone. Each moving dot ≈ <b id="perDot">60</b> real trips, drawn as an arc between zone centres, not the route.</div>
 </section>
 
 <section class="glass zone hidden" id="zone">
@@ -76,9 +76,10 @@
   <p><b>Trips.</b> NYC TLC trip records for Yellow taxi, Green taxi and high-volume for-hire vehicles (Uber, Lyft). A pickup counts
     in the 10 minutes it starts, a drop-off in the 10 minutes it ends. Removed: unknown zones (264/265), trips under 1 minute or over 4 hours.</p>
   <p><b>Subway.</b> MTA Subway Hourly Ridership: entries per station complex and hour, all fare types.</p>
-  <p><b>Heart.</b> The trip-weighted centre of the taxi zones in that hour (pickups + drop-offs), and the entry-weighted centre of the
-    subway stations. It is a weighted centre of these trips, not where people are and not the single centre of New York. Airport trips
-    pull the taxi heart east.</p>
+  <p><b>Hearts.</b> A heart marks where trips are densest at that moment: a kernel density of pickups + drop-offs at the taxi-zone
+    centres (1 km radius), and its peak. The city heart uses all car trips; the borough hearts only the zones of Brooklyn, Queens and
+    the Bronx; the subway heart uses station entries. A plain average position was tried first: because most trips start outside
+    Manhattan, it fell into the East River, so the density peak is used instead. Hearts show where trips concentrate, not where people are.</p>
   <p><b>Limits.</b> Taxi and ride-hail trips are not all traffic and not all people. Arcs connect zone centres; they are not real routes.
     The animation replays measured data; it is not a forecast.</p>
   <p class="fine">Data: NYC Taxi &amp; Limousine Commission trip records and taxi zones · MTA Subway Hourly Ridership (data.ny.gov) ·
@@ -91,6 +92,6 @@
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pmtiles@3.2.1/dist/pmtiles.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/deck.gl@9.0.38/dist.min.js"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

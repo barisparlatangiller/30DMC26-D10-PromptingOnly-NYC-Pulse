@@ -4,8 +4,8 @@
 
 One Tuesday in New York, **16 June 2026**, replayed over 24 hours: every Yellow taxi, Green taxi and Uber/Lyft trip, and every
 subway entry. Colour always means time of day (night indigo → dawn pink → day amber → evening magenta). 1.08 million 3D buildings
-glow with the trips of their own taxi zone; moving arcs show sampled real trips; two beating hearts float above the skyline:
-the trip-weighted centre of car trips and of subway entries, leaving a trail through the day.
+glow with the trips of their own taxi zone; moving arcs show sampled real trips; beating hearts mark where trips are
+densest (the whole city, each borough, the subway) and leave a trail through the day.
 
 Made **only by prompting** an AI (Claude): every prompt is in [PROMPTS.md](PROMPTS.md).
 
@@ -19,8 +19,9 @@ Made **only by prompting** an AI (Claude): every prompt is in [PROMPTS.md](PROMP
 
 ## Method
 - Pickups counted in the 10 minutes they start on 16 June, drop-offs in the 10 minutes they end. Removed: zones 264/265, trips < 1 min or > 4 h.
-- **Heart** = mean position of taxi-zone centres weighted by pickups + drop-offs (subway: station complexes weighted by entries).
-  A weighted centre of these trips, not where people are, and not the one centre of New York. Airport trips pull it east.
+- **Hearts** = where trips are densest at that moment: Gaussian kernel density (σ = 1 km) of pickups + drop-offs at the taxi-zone
+  centres, peak found as a soft maximum. City heart: all zones; borough hearts: Brooklyn, Queens, the Bronx; subway heart: station entries.
+  A trip-weighted mean was tried first and fell into the East River (most trips start outside Manhattan), so the density peak is used.
 - Moving dots = a reproducible 1-in-60 sample of real trips, drawn with real start time and duration as arcs between zone centres
   (not routes).
 - Every fact in the map is computed from the same data (`pipeline/c_web.py`).

@@ -49,9 +49,24 @@ async function load() {
   for (let b = 0; b < NB; b++) { const f = Math.max(0, Math.min(23, (b + 0.5) / 6 - 0.5)), h0 = Math.floor(f), h1 = Math.min(23, h0 + 1), k = smooth(f - h0);
     for (let s = 0; s < ns; s++) S.subBin[b * ns + s] = (sub.h[h0][s] * (1 - k) + sub.h[h1][s] * k) / 6; }
   S.subTot = sub.h.map(r => r.reduce((a, b) => a + b, 0));
-  S.subHeart = []; for (let b = 0; b < NB; b++) { let w = 0, x = 0, y = 0; for (let s = 0; s < ns; s++) { const v = S.subBin[b * ns + s]; w += v; x += v * sub.stations[s][2]; y += v * sub.stations[s][3]; } S.subHeart.push([x / w, y / w]); }
+  S.ZP = []; for (let z = 1; z <= NZ; z++) S.ZP.push([S.cen[2 * z], S.cen[2 * z + 1]]);
+  S.ZK = kernel(S.ZP); S.SP = sub.stations.map(s => [s[2], s[3]]); S.SK = kernel(S.SP);
+  S.SB = Array.from({ length: NB }, (_, b) => S.subBin.subarray(b * ns, (b + 1) * ns));
+  S.subHeart = smoothSeries(S.SB.map(w => peak(w, S.SK, S.SP)));
+  S.boroIdx = Object.fromEntries(["Brooklyn", "Queens", "Bronx"].map(b => [b, S.ZP.map((_, i) => i).filter(i => S.zboro[i + 1] === b)]));
   $("#perDot").textContent = stats.per_dot;
 }
+
+// "heart" = where trips are densest: Gaussian kernel density (σ = 1 km) at the zone centres, peak as a soft maximum
+function kernel(P) { const n = P.length, K = new Float32Array(n * n);
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const dx = (P[i][0] - P[j][0]) * 84.3, dy = (P[i][1] - P[j][1]) * 111.2; K[i * n + j] = Math.exp(-(dx * dx + dy * dy) / 2); } return K; }
+function peak(w, K, P, idx) {
+  const n = P.length, I = idx || P.map((_, i) => i), D = new Float32Array(I.length); let mx = 1e-9;
+  I.forEach((i, a) => { let s = 0; for (let j = 0; j < n; j++) s += w[j] * K[i * n + j]; D[a] = s; if (s > mx) mx = s; });
+  let x = 0, y = 0, q = 0; I.forEach((i, a) => { const v = Math.pow(D[a] / mx, 10); x += v * P[i][0]; y += v * P[i][1]; q += v; }); return [x / q, y / q];
+}
+function smoothSeries(A, sig = 1.5) { return A.map((_, b) => { let x = 0, y = 0, w = 0;
+  for (let d = -4; d <= 4; d++) { const j = Math.max(0, Math.min(A.length - 1, b + d)), k = Math.exp(-(d * d) / (2 * sig * sig)); x += k * A[j][0]; y += k * A[j][1]; w += k; } return [x / w, y / w]; }); }
 
 function combine() {                                    // selected modes → smoothed arrays, hearts, scales
   const pu = new Float32Array(NB * NZ), du = new Float32Array(NB * NZ);
@@ -61,10 +76,12 @@ function combine() {                                    // selected modes → sm
   S.PU = sm(pu); S.DO = sm(du);
   const all = []; for (let i = 0; i < S.PU.length; i++) all.push(S.PU[i] + S.DO[i]);
   all.sort((a, b) => a - b); S.vmax = Math.max(1, all[Math.floor(all.length * 0.997)]);
-  S.heart = []; S.binTot = [];
-  for (let b = 0; b < NB; b++) { let w = 0, x = 0, y = 0, p = 0;
-    for (let z = 0; z < NZ; z++) { const v = S.PU[b * NZ + z] + S.DO[b * NZ + z]; w += v; x += v * S.cen[2 * (z + 1)]; y += v * S.cen[2 * (z + 1) + 1]; p += S.PU[b * NZ + z]; }
-    S.heart.push([x / w, y / w]); S.binTot.push(p); }
+  S.binTot = []; const W = [];
+  for (let b = 0; b < NB; b++) { const w = new Float32Array(NZ); let p = 0;
+    for (let z = 0; z < NZ; z++) { w[z] = S.PU[b * NZ + z] + S.DO[b * NZ + z]; p += S.PU[b * NZ + z]; } W.push(w); S.binTot.push(p); }
+  S.heart = smoothSeries(W.map(w => peak(w, S.ZK, S.ZP)));
+  S.boroHeart = Object.fromEntries(Object.entries(S.boroIdx).map(([b, I]) => [b, smoothSeries(W.map(w => peak(w, S.ZK, S.ZP, I)))]));
+  S.boroTot = Object.fromEntries(Object.entries(S.boroIdx).map(([b, I]) => [b, W.map(w => I.reduce((a, i) => a + w[i], 0))]));
   S.rateMax = Math.max(...S.binTot);
   S.hourly = Array.from({ length: 24 }, (_, h) => S.binTot.slice(h * 6, h * 6 + 6).reduce((a, b) => a + b, 0));
   const mi = new Set([...S.modes].map(m => MODES.indexOf(m)));
@@ -94,7 +111,8 @@ function at(t) {
   const lerp2 = (A) => [A[b0][0] * (1 - k) + A[b1][0] * k, A[b0][1] * (1 - k) + A[b1][1] * k];
   const ns = S.sub.stations.length, sv = new Float32Array(ns);
   for (let s = 0; s < ns; s++) sv[s] = S.subBin[b0 * ns + s] * (1 - k) + S.subBin[b1 * ns + s] * k;
-  return { f, b0, k, pu, du, heart: lerp2(S.heart), sheart: lerp2(S.subHeart), sv, rate: (S.binTot[b0] * (1 - k) + S.binTot[b1] * k) / 10 };
+  const boro = Object.fromEntries(Object.keys(S.boroHeart).map(b => [b, { p: lerp2(S.boroHeart[b]), n: S.boroTot[b][b0] * (1 - k) + S.boroTot[b][b1] * k }]));
+  return { f, b0, k, pu, du, heart: lerp2(S.heart), sheart: lerp2(S.subHeart), boro, sv, rate: (S.binTot[b0] * (1 - k) + S.binTot[b1] * k) / 10 };
 }
 const vOf = (st, z) => Math.pow(Math.log1p(st.pu[z] + st.du[z]) / Math.log1p(S.vmax), 1.25);
 
@@ -154,7 +172,7 @@ function paintZones(st, hc) {                                     // buildings: 
 // ── deck layers ──
 const ADD = { blend: true, blendColorOperation: "add", blendColorSrcFactor: "src-alpha", blendColorDstFactor: "one",
   blendAlphaOperation: "add", blendAlphaSrcFactor: "one", blendAlphaDstFactor: "one-minus-src-alpha", depthCompare: "always" };
-const ALT = 620;                                                  // the hearts float above the skyline
+const ALT = 160;                                                  // the hearts hover just above street level
 function beat(phase, bpm) { const x = (phase * bpm / 60) % 1; return Math.exp(-(((x - 0.02) / 0.05) ** 2)) + 0.55 * Math.exp(-(((x - 0.2) / 0.06) ** 2)); }
 
 function deckLayers(st, hc) {
@@ -187,26 +205,34 @@ function deckLayers(st, hc) {
     L.push(new deck.TripsLayer({ id: "dots", data: S.dots, getPath: d => d.path, getTimestamps: d => d.ts, getColor: d => d.c,
       currentTime: t, trailLength: 9, fadeTrail: true, widthMinPixels: 2.2, capRounded: true, jointRounded: true, opacity: 0.9, parameters: ADD }));
   }
-  // hearts: trail, light beam, beating orb
-  const upto = Math.floor(st.f);
-  const trail = S.heart.slice(0, upto + 1).map(p => [p[0], p[1], ALT]); trail.push([st.heart[0], st.heart[1], ALT]);
-  const tcol = trail.map((_, i) => [...hourColor(Math.min(i, st.f) * 10 + 5).map(Math.round), 255]);
-  const seg = []; for (let i = 1; i < trail.length; i++) seg.push([trail[i - 1], trail[i], tcol[i]]);
-  L.push(new deck.LineLayer({ id: "trailGlow", data: seg, getSourcePosition: d => d[0], getTargetPosition: d => d[1], getColor: d => [d[2][0], d[2][1], d[2][2], 55],
-    getWidth: 12, widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t, getColor: t } }));
-  L.push(new deck.LineLayer({ id: "trail", data: seg, getSourcePosition: d => d[0], getTargetPosition: d => d[1], getColor: d => d[2],
-    getWidth: 3, widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t, getColor: t } }));
-  const bt = st.beat;
-  const orbs = [{ p: st.heart, c: hc, s: 1, label: "taxi heart" }];
-  if (S.layers.has("subway")) {
-    const strail = S.subHeart.slice(0, upto + 1).map(p => [p[0], p[1], ALT]); strail.push([st.sheart[0], st.sheart[1], ALT]);
-    const sseg = []; for (let i = 1; i < strail.length; i++) sseg.push([strail[i - 1], strail[i]]);
-    L.push(new deck.LineLayer({ id: "strail", data: sseg, getSourcePosition: d => d[0], getTargetPosition: d => d[1], getColor: [...ICE, 150], getWidth: 2,
-      widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t } }));
-    orbs.push({ p: st.sheart, c: ICE, s: 0.8, label: "subway heart" });
+  // hearts: where trips are densest now — the city (all car trips), each borough, and the subway. Low above the ground, no parallax.
+  const upto = Math.floor(st.f), bt = st.beat;
+  const trailOf = (series, cur, z) => { const a = series.slice(0, upto + 1).map(p => [p[0], p[1], z]); a.push([cur[0], cur[1], z]); return a; };
+  const segs = (a, colFn) => { const o = []; for (let i = 1; i < a.length; i++) o.push([a[i - 1], a[i], colFn(i)]); return o; };
+  const ct = trailOf(S.heart, st.heart, 70);
+  const cseg = segs(ct, i => [...hourColor(Math.min(i, st.f) * 10 + 5).map(Math.round), 255]);
+  L.push(new deck.LineLayer({ id: "trailGlow", data: cseg, getSourcePosition: d => d[0], getTargetPosition: d => d[1], getColor: d => [d[2][0], d[2][1], d[2][2], 60],
+    getWidth: 14, widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t, getColor: t } }));
+  L.push(new deck.LineLayer({ id: "trail", data: cseg, getSourcePosition: d => d[0], getTargetPosition: d => d[1], getColor: d => d[2],
+    getWidth: 3.5, widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t, getColor: t } }));
+  const orbs = [{ p: st.heart, c: hc, s: 1, label: "CITY HEART" }];
+  const bmax = Math.max(...Object.values(S.boroTot).flat());
+  const bseg = [];
+  for (const [b, o] of Object.entries(st.boro)) {
+    orbs.push({ p: o.p, c: mix(hc, [255, 255, 255], 0.25), s: 0.42 + 0.3 * Math.sqrt(o.n / bmax), label: b.toUpperCase() });
+    bseg.push(...segs(trailOf(S.boroHeart[b], o.p, 60), () => [...mix(hc, [255, 255, 255], 0.25).map(Math.round), 150]));
   }
+  if (S.layers.has("subway")) {
+    bseg.push(...segs(trailOf(S.subHeart, st.sheart, 60), () => [...ICE, 170]));
+    orbs.push({ p: st.sheart, c: ICE, s: 0.8, label: "SUBWAY HEART" });
+  }
+  L.push(new deck.LineLayer({ id: "btrail", data: bseg, getSourcePosition: d => d[0], getTargetPosition: d => d[1], getColor: d => d[2],
+    getWidth: 2, widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t, getColor: t } }));
+  L.push(new deck.ScatterplotLayer({ id: "halo", data: orbs, getPosition: d => [d.p[0], d.p[1], 3], filled: false, stroked: true, radiusUnits: "meters",
+    getRadius: d => d.s * (260 + 160 * bt), getLineColor: d => [...d.c.map(Math.round), 170], lineWidthMinPixels: 1.5, parameters: ADD,
+    updateTriggers: { getPosition: t, getRadius: [t, bt], getLineColor: t } }));
   L.push(new deck.LineLayer({ id: "beam", data: orbs, getSourcePosition: d => [d.p[0], d.p[1], 0], getTargetPosition: d => [d.p[0], d.p[1], ALT],
-    getColor: d => [...d.c.map(Math.round), 120], getWidth: 2, widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t, getColor: t } }));
+    getColor: d => [...d.c.map(Math.round), 150], getWidth: 2, widthUnits: "pixels", parameters: ADD, updateTriggers: { getSourcePosition: t, getTargetPosition: t, getColor: t } }));
   for (const [r, a] of [[3.2, 26], [1.9, 60], [1.15, 140]]) {
     L.push(new deck.ScatterplotLayer({ id: "orb" + r, data: orbs, getPosition: d => [d.p[0], d.p[1], ALT], billboard: true, radiusUnits: "pixels",
       getRadius: d => d.s * (9 + 9 * bt) * r, getFillColor: d => [...d.c.map(Math.round), a], parameters: ADD,
@@ -214,9 +240,9 @@ function deckLayers(st, hc) {
   }
   L.push(new deck.ScatterplotLayer({ id: "core", data: orbs, getPosition: d => [d.p[0], d.p[1], ALT], billboard: true, radiusUnits: "pixels",
     getRadius: d => d.s * (5 + 3 * bt), getFillColor: [255, 255, 255, 255], parameters: { depthCompare: "always" }, updateTriggers: { getPosition: t, getRadius: [t, bt] } }));
-  L.push(new deck.TextLayer({ id: "hl", data: orbs, getPosition: d => [d.p[0], d.p[1], ALT], getText: d => d.label.toUpperCase(), getSize: 11, getColor: [235, 240, 250, 220],
-    getPixelOffset: [0, -30], fontFamily: "Inter, sans-serif", fontWeight: 700, characterSet: "auto", outlineWidth: 2, outlineColor: [3, 5, 10, 220], fontSettings: { sdf: true },
-    billboard: true, parameters: { depthCompare: "always" }, updateTriggers: { getPosition: t } }));
+  L.push(new deck.TextLayer({ id: "hl", data: orbs, getPosition: d => [d.p[0], d.p[1], ALT], getText: d => d.label, getSize: d => d.s === 1 ? 12.5 : 10.5,
+    getColor: [235, 240, 250, 230], getPixelOffset: d => [0, -24 - 14 * d.s], fontFamily: "Inter, sans-serif", fontWeight: 700, characterSet: "auto", outlineWidth: 2,
+    outlineColor: [3, 5, 10, 220], fontSettings: { sdf: true }, billboard: true, parameters: { depthCompare: "always" }, updateTriggers: { getPosition: t } }));
   // landmarks
   const shown = [];                                                  // landmarks: hide labels that would overlap on screen
   for (const d of [...LANDMARKS].sort((a, b) => b[3] - a[3])) {
@@ -253,8 +279,9 @@ function ui(st, hc) {
   $("#part").textContent = partOfDay(mm);
   $("#nTaxi").textContent = fmt(st.rate * 60); $("#nSub").textContent = fmt(st.sv.reduce((a, b) => a + b, 0) * 6);
   const h = Math.floor(mm / 60); $("#bars").querySelectorAll("i").forEach((el, i) => el.classList.toggle("on", i === h));
-  const km = Math.hypot((st.heart[0] - st.sheart[0]) * 84.3, (st.heart[1] - st.sheart[1]) * 111.2);
-  $("#heartTxt").innerHTML = `Taxi heart near <b>${nearest(st.heart)}</b>` + (S.layers.has("subway") ? `, subway heart near <b>${nearest(st.sheart)}</b>, ${km.toFixed(1)} km apart.` : ".");
+  const sn = p => { let bi = 0, bd = 1e9; S.SP.forEach((q, i) => { const d = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2; if (d < bd) { bd = d; bi = i; } }); return S.sub.stations[bi][0].replace(/ \(.*\)$/, ""); };
+  $("#heartTxt").innerHTML = `<span class="hl">Hearts = where trips are densest right now</span>City: <b>${nearest(st.heart)}</b> · Brooklyn: <b>${nearest(st.boro.Brooklyn.p)}</b> · Queens: <b>${nearest(st.boro.Queens.p)}</b> · Bronx: <b>${nearest(st.boro.Bronx.p)}</b>` +
+    (S.layers.has("subway") ? ` · Subway: <b>${sn(st.sheart)}</b>` : "");
   const fact = S.stats.facts.filter(f => mm >= f[0] && mm < f[0] + 75).pop();
   if ((fact && fact[1]) !== S.lastFact) { S.lastFact = fact && fact[1]; const el = $("#fact");
     el.classList.remove("show"); if (fact) setTimeout(() => { $("#factT").textContent = fact[1]; el.classList.add("show"); }, 250); }

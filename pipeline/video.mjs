@@ -78,7 +78,7 @@ async function openPage() {
       <div class="ramp" id="vr"><i id="vi"></i></div><div class="hz" id="vh"></div></div>
       <div class="card2" id="c2"><h2>Where the heart beats</h2><ul>
         <li>${tot.toLocaleString("en-US")} car trips and ${st.subway_entries.toLocaleString("en-US")} subway entries in one day.</li>
-        <li>${pick(/Uber and Lyft/)}</li><li>${pick(/travels/)}</li><li>${pick(/busiest 10 minutes/)}</li></ul>
+        <li>${pick(/Uber and Lyft/)}</li><li>${pick(/city heart stays/)}</li><li>${pick(/busiest 10 minutes/)}</li></ul>
         <div class="url">Play the day yourself · barisparlatangiller.github.io</div>
         <div class="att">NYC TLC trip records · MTA Subway Hourly Ridership · NYC OpenData buildings · © CARTO, © OpenStreetMap · made only by prompting Claude</div></div>`);
     document.getElementById("vr").style.background = document.getElementById("ramp").style.background;
