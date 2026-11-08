@@ -148,7 +148,7 @@ function addLayers() {
 
 function paintZones(st, hc) {                                     // buildings: one uniform colour that breathes with the heartbeat
   const bt = st.beat || 0;
-  map.setPaintProperty("bld", "fill-extrusion-color", rgb(mix(mix(BASE, hc, 0.16), [255, 255, 255], 0.03 + 0.05 * bt)));
+  map.setPaintProperty("bld", "fill-extrusion-color", rgb(mix(mix(BASE, hc, 0.07), [255, 255, 255], 0.02 + 0.06 * bt)));
 }
 
 // ── deck layers ──
@@ -171,9 +171,9 @@ function deckLayers(st, hc) {
   }
   if (S.layers.has("marks")) {
     L.push(new deck.ScatterplotLayer({ id: "pu", data: zl, getPosition: z => [S.cen[2 * z], S.cen[2 * z + 1], 20],
-      getRadius: z => Math.sqrt(st.pu[z] * 6) * 8, radiusUnits: "meters", getFillColor: z => hcA(Math.round(40 + 120 * vOf(st, z))), parameters: ADD, updateTriggers: { getRadius: t, getFillColor: t } }));
+      getRadius: z => Math.sqrt(st.pu[z] * 6) * 8, radiusUnits: "meters", getFillColor: z => hcA(Math.round(25 + 95 * vOf(st, z))), parameters: ADD, updateTriggers: { getRadius: t, getFillColor: t } }));
     L.push(new deck.ScatterplotLayer({ id: "do", data: zl, getPosition: z => [S.cen[2 * z], S.cen[2 * z + 1], 22], filled: false, stroked: true,
-      getRadius: z => Math.sqrt(st.du[z] * 6) * 8 + 25, radiusUnits: "meters", getLineColor: z => hcA(Math.round(50 + 150 * vOf(st, z))), lineWidthMinPixels: 1, parameters: ADD,
+      getRadius: z => Math.sqrt(st.du[z] * 6) * 8 + 25, radiusUnits: "meters", getLineColor: z => hcA(Math.round(30 + 110 * vOf(st, z))), lineWidthMinPixels: 1, parameters: ADD,
       updateTriggers: { getRadius: t, getLineColor: t } }));
     const top = zl.map(z => [z, st.pu[z] + st.du[z]]).sort((a, b) => b[1] - a[1]).slice(0, 6);
     for (let k = 0; k < 3; k++) {
@@ -218,12 +218,18 @@ function deckLayers(st, hc) {
     getPixelOffset: [0, -30], fontFamily: "Inter, sans-serif", fontWeight: 700, characterSet: "auto", outlineWidth: 2, outlineColor: [3, 5, 10, 220], fontSettings: { sdf: true },
     billboard: true, parameters: { depthCompare: "always" }, updateTriggers: { getPosition: t } }));
   // landmarks
-  L.push(new deck.LineLayer({ id: "lmL", data: LANDMARKS, getSourcePosition: d => [d[1], d[2], 0], getTargetPosition: d => [d[1], d[2], d[3]],
+  const shown = [];                                                  // landmarks: hide labels that would overlap on screen
+  for (const d of [...LANDMARKS].sort((a, b) => b[3] - a[3])) {
+    const p = map.project([d[1], d[2]]); const w = d[0].length * 7;
+    if (shown.every(q => Math.abs(q.p.x - p.x) > (w + q.w) / 2 + 8 || Math.abs(q.p.y - p.y) > 26)) shown.push({ d, p, w });
+  }
+  const LM = shown.map(q => q.d);
+  L.push(new deck.LineLayer({ id: "lmL", data: LM, getSourcePosition: d => [d[1], d[2], 0], getTargetPosition: d => [d[1], d[2], d[3]],
     getColor: [220, 228, 245, 90], getWidth: 1, widthUnits: "pixels" }));
-  L.push(new deck.TextLayer({ id: "lmT", data: LANDMARKS, getPosition: d => [d[1], d[2], d[3]], getText: d => d[0], getSize: 11.5, getColor: [225, 232, 248, 230],
+  L.push(new deck.TextLayer({ id: "lmT", data: LM, getPosition: d => [d[1], d[2], d[3]], getText: d => d[0], getSize: 11.5, getColor: [225, 232, 248, 230],
     getPixelOffset: [0, -8], getTextAnchor: "middle", getAlignmentBaseline: "bottom", fontFamily: "Inter, sans-serif", fontWeight: 600, characterSet: "auto",
     outlineWidth: 2.5, outlineColor: [3, 5, 10, 230], fontSettings: { sdf: true }, billboard: true, parameters: { depthCompare: "always" },
-    extensions: [new deck.CollisionFilterExtension()], getCollisionPriority: d => d[3], collisionTestProps: { sizeScale: 1.6 } }));
+ }));
   return L;
 }
 
