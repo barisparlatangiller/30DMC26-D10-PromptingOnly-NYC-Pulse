@@ -1,0 +1,25 @@
+name: encode-video
+on:
+  workflow_dispatch:
+    inputs:
+      run_id: { description: "run with the frames-* artifacts", required: true }
+permissions:
+  contents: write
+  actions: read
+jobs:
+  encode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { pattern: "frames-*", path: media, merge-multiple: true, run-id: "${{ inputs.run_id }}", github-token: "${{ github.token }}" }
+      - name: Encode and push to the media branch
+        shell: bash -eo pipefail {0}
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q ffmpeg > /dev/null
+          ls media/frames | wc -l
+          mkdir -p /tmp/m
+          ffmpeg -y -loglevel error -framerate 24 -i media/frames/f%04d.png -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -movflags +faststart /tmp/m/day10_nyc_pulse_12s.mp4
+          for n in 0180 0200 0215 0240; do ffmpeg -y -loglevel error -i media/frames/f$n.png -q:v 2 /tmp/m/frame_$n.jpg; done
+          cd /tmp/m && ls -la && git init -q -b media && git config user.name Claude && git config user.email noreply@anthropic.com
+          git add . && git commit -qm "12 s video ($(date -u +%F))"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" media

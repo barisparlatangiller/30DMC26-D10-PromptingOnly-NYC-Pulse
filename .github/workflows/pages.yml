@@ -91,7 +91,7 @@ jobs:
         shell: bash -eo pipefail {0}
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q ffmpeg > /dev/null
-          ls media; if ls media/frames/*.png > /dev/null 2>&1; then JOIN=1 node pipeline/video.mjs; fi
+          ls media/frames | wc -l; mkdir -p media && ffmpeg -y -loglevel error -framerate 24 -i media/frames/f%04d.png -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -movflags +faststart media/day10_nyc_pulse_12s.mp4 && ffmpeg -y -loglevel error -i media/frames/f0180.png -q:v 2 media/cover.jpg
       - name: Push to media branch
         run: |
           mkdir -p /tmp/m && cp media/*.mp4 media/*.png media/*.jpg /tmp/m/ 2>/dev/null || true
